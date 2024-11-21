@@ -15,11 +15,11 @@ Badges here?
 - [Introduction](#introduction)
 - [Design Decisions](#design-decisions)
 - [Installation](#installation)
-  - [Install PM2](#install-pm2)
-  - [Install-Repo](#install-repo)
+- [Subnet Participation](#subnet-participation)
+  - [Makefile](#makefile)
   - [Running a Miner](#running-a-miner)
   - [Running a Validator](#running-a-validator)
-  - [Running Miner/Validator in Docker](#running-minervalidator-in-docker)
+- [Running Miner/Validator in Docker](#running-minervalidator-in-docker)
 - [About the Rewards Mechanism](#about-the-rewards-mechanism)
 - [Compute Requirements](#compute-requirements)
 - [Roadmap](#roadmap)
@@ -37,7 +37,6 @@ Another Blurb
 ---
 ## Installation
 
-### Install PM2
 First, install PM2:
 ```
 sudo apt update
@@ -50,9 +49,7 @@ pm2 --version
 ```
 
 
-### Install-Repo
-
-Begin by cloning the repository:
+Clone the repository:
 ```
 git clone https://github.com/coinmetrics/precog.git
 cd precog
@@ -70,16 +67,45 @@ pip install poetry
 poetry install
 ```
 
+---
+## Subnet Participation
+heres how you do stuff
+
+### Makefile
+Start by editing the Makefile with you wallet and network information.
+
 ### Running a Miner
-TODO: write this
+TODO: write this \
+Base miner: 
+1. Run the command:
+    ``` 
+    make miner 
+    ```
+
+Custom miner:
+1. Write a custom forward function stored in precog/miners/your_function.py 
+    - This function should handle how the miner responds to requests from the validator
+    - Within the function, synapse.predictions and synapse.interval should be set.
+    - See [forward.py](https://github.com/coinmetrics/precog/blob/master/precog/miners/forward.py) for an example 
+2. Add a command to Makefile.
+    - copy the miner command and rename it (e.g. miner_custom) in Makefile
+    - replace the --forward_function argument with your_function
+3. Run the Command:
+    ``` 
+    make miner_custom 
+    ```
+
 
 ### Running a Validator
-TODO: write this
+```
+make validator
+```
 
 
 ## About the Rewards Mechanism
 Optional but recommended.
 
+---
 ## Roadmap
 
 ## Compute Requirements
@@ -89,6 +115,7 @@ TODO: update these
 |---------- |-----------|
 |  8gb RAM  |  8gb RAM  |
 |  2 vCPUs  |  2 vCPUs  |
+
 ## License
 This repository is licensed under the MIT License.
 ```text
