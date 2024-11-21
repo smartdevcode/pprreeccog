@@ -1,5 +1,5 @@
 <div align="center">
-<img src="docs/images/precog-logo.png" />
+<img src="docs/images/precog-logo.svg" />
 
 # **CoinMetrics Precog Subnet** <!-- omit in toc -->
 
@@ -19,7 +19,6 @@ Badges here?
   - [Makefile](#makefile)
   - [Running a Miner](#running-a-miner)
   - [Running a Validator](#running-a-validator)
-- [Running Miner/Validator in Docker](#running-minervalidator-in-docker)
 - [About the Rewards Mechanism](#about-the-rewards-mechanism)
 - [Compute Requirements](#compute-requirements)
 - [Roadmap](#roadmap)
