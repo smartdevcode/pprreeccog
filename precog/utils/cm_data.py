@@ -106,7 +106,7 @@ class CMData:
             base (str, optional): Base Asset of Market. Defaults to "btc".
             quote (str, optional): Quote Asset of Market. Defaults to "usd".
             market_type (str, optional): Market type ('spot', 'option', 'future'). Defaults to "spot".
-            
+
         Returns:
             catalog (pd.DataFrame): Dataframe containing active markets with columns
                 ['market', 'min_time', 'max_time']
@@ -114,14 +114,18 @@ class CMData:
         catalog = self.client.catalog_market_open_interest_v2(
             base=base, quote=quote, market_type=market_type, page_size=10000, paging_from="end"
         ).to_dataframe()
-        
+
         return catalog
 
     def get_market_open_interest(
         self, markets: list, page_size: int = 10000, parallelize=False, **kwargs
     ) -> pd.DataFrame:
-        """Fetches available market open interest from CoinMetrics Python client. 
+        """Fetches available market open interest from CoinMetrics Python client.
             Possible markets can be obtained from the get_open_interest_catalog() method
+
+        Args:
+            markets (list): List of derivatives markets to get the Open Interest for.  
+            Note there is a character limit to the query, so may need to be done in chunks for a long list
 
         Returns:
             DataFrame: Open Interest of unsettled derivatives contracts. Columns are:
