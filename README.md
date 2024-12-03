@@ -5,7 +5,10 @@
 
 |     |     |
 | :-: | :-: |
-Badges here?
+| **Status** | <img src="https://img.shields.io/github/v/release/coinmetrics/precog?label=Release" height="25"/> <img src="https://img.shields.io/github/actions/workflow/status/coinmetrics/precog/ci.yml?label=Build" height="25"/> <br> <a href="https://github.com/pre-commit/pre-commit" target="_blank"> <img src="https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white&label=Pre-Commit" height="25"/> </a> <a href="https://github.com/psf/black" target="_blank"> <img src="https://img.shields.io/badge/code%20style-black-000000.svg?label=Code%20Style" height="25"/> </a> <br> <img src="https://img.shields.io/github/license/coinmetrics/precog?label=License" height="25"/> |
+| **Activity** | <img src="https://img.shields.io/github/commit-activity/m/coinmetrics/precog?label=Commit%20Activity" height="25"/> <img src="https://img.shields.io/github/commits-since/coinmetrics/precog/latest/dev?label=Commits%20Since%20Latest%20Release" height="25"/> <br> <img src="https://img.shields.io/github/release-date/coinmetrics/precog?label=Latest%20Release%20Date" height="25"/> <img src="https://img.shields.io/github/last-commit/coinmetrics/precog/dev?label=Last%20Commit" height="25"/> <br> <img src="https://img.shields.io/github/contributors/coinmetrics/precog?label=Contributors" height="25"/> |
+| **Compatibility** | <img src="https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fcoinmetrics%2Fprecog%2Frefs%2Fheads%2Fdev%2Fpyproject.toml&query=%24.tool.poetry.dependencies.python&logo=python&label=Python&logoColor=yellow" height="25"/> <img src="https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fcoinmetrics%2Fprecog%2Frefs%2Fheads%2Fdev%2Fpyproject.toml&query=%24.tool.poetry.dependencies.bittensor&prefix=v&label=Bittensor" height="25"/> <br> <img src="https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fcoinmetrics%2Fprecog%2Frefs%2Fheads%2Fdev%2Fpyproject.toml&query=%24.tool.poetry.dependencies.coinmetrics-api-client&prefix=v&label=coinmetrics-api-client" height="25"/> |
+| **Social** | <a href="" target="_blank"> <img src="https://img.shields.io/website?url=https%3A%2F%2Fcharts.coinmetrics.io%2Fcrypto-data%2F&up_message=CoinMetrics&label=Website" height="25"/> </a> |
 
 
 </div>
@@ -20,8 +23,8 @@ Badges here?
   - [Running a Miner](#running-a-miner)
   - [Running a Validator](#running-a-validator)
 - [About the Rewards Mechanism](#about-the-rewards-mechanism)
-- [Compute Requirements](#compute-requirements)
 - [Roadmap](#roadmap)
+- [Compute Requirements](#compute-requirements)
 - [License](#license)
 
 ---
@@ -56,7 +59,7 @@ cd precog
 
 Create and source a python virtual environment:
 ```
-python3 -m venv 
+python3 -m venv
 source .venv/bin/activate
 ```
 
@@ -75,23 +78,23 @@ Start by editing the Makefile with you wallet and network information.
 
 ### Running a Miner
 TODO: write this \
-Base miner: 
+Base miner:
 1. Run the command:
-    ``` 
-    make miner 
+    ```
+    make miner
     ```
 
 Custom miner:
-1. Write a custom forward function stored in precog/miners/your_function.py 
+1. Write a custom forward function stored in precog/miners/your_function.py
     - This function should handle how the miner responds to requests from the validator
     - Within the function, synapse.predictions and synapse.interval should be set.
-    - See [forward.py](https://github.com/coinmetrics/precog/blob/master/precog/miners/forward.py) for an example 
+    - See [forward.py](https://github.com/coinmetrics/precog/blob/master/precog/miners/forward.py) for an example
 2. Add a command to Makefile.
     - copy the miner command and rename it (e.g. miner_custom) in Makefile
     - replace the --forward_function argument with your_function
 3. Run the Command:
-    ``` 
-    make miner_custom 
+    ```
+    make miner_custom
     ```
 
 
@@ -119,7 +122,7 @@ TODO: update these
 This repository is licensed under the MIT License.
 ```text
 # The MIT License (MIT)
-# Copyright © 2024 Foundry Digital LLC
+# Copyright © 2024 CoinMetrics LLC
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
 # documentation files (the “Software”), to deal in the Software without restriction, including without limitation
