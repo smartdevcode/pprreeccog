@@ -1,6 +1,7 @@
-import pandas as pd
+from datetime import date, datetime
 from typing import Optional, Union
-from datetime import datetime, date
+
+import pandas as pd
 from coinmetrics.api_client import CoinMetricsClient
 
 
@@ -124,7 +125,7 @@ class CMData:
             Possible markets can be obtained from the get_open_interest_catalog() method
 
         Args:
-            markets (list): List of derivatives markets to get the Open Interest for.  
+            markets (list): List of derivatives markets to get the Open Interest for.
             Note there is a character limit to the query, so may need to be done in chunks for a long list
 
         Returns:
