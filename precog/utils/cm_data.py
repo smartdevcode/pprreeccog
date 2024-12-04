@@ -29,7 +29,7 @@ class CMData:
         parallelize: bool = False,
         time_inc_parallel: pd.Timedelta = pd.Timedelta("1h"),
         **kwargs,
-    ) -> pd.DataFrame:        
+    ) -> pd.DataFrame:
         """Fetches CM Reference Rate for specific asset ticker or list of tickers from CoinMetrics Python client.
 
         Args:
@@ -39,7 +39,7 @@ class CMData:
             end_inclusive (bool, optional): Whether to include a data point occuring at the "end" time. Defaults to True.
             frequency (str, optional): Frequency of prices - '200ms', '1s', '1m', '1m', '1d'. Defaults to "1s".
             page_size (int, optional): Page size of return, recommended 10000. Defaults to 10000.
-            parallelize (bool, optional): Whether to parallelize query into multiple queries. 
+            parallelize (bool, optional): Whether to parallelize query into multiple queries.
                 Can speed up retrieval but may go over usage limits. Defaults to False.
             time_inc_parallel (pd.Timedelta, optional): If using parallelize, time interval queried by each thread. Defaults to pd.Timedelta("1h").
 
