@@ -29,7 +29,7 @@ validator:
 		--neuron.name validator \
 		--wallet.name $(coldkey) \
 		--wallet.hotkey $(validator_hotkey) \
-		--subtensor.network $(network) \
+		--subtensor.chain_endpoint $(network) \
 		--axon.port 30335 \
 		--netuid $(netuid) \
 		--logging.level $(logging_level)
@@ -39,7 +39,7 @@ miner:
 		--neuron.name miner \
 		--wallet.name $(coldkey) \
 		--wallet.hotkey $(miner_hotkey) \
-		--subtensor.network $(network) \
+		--subtensor.chain_endpoint $(network) \
 		--axon.port 30336 \
 		--netuid $(netuid) \
 		--logging.level $(logging_level) \
@@ -52,7 +52,7 @@ miner2:
 		--neuron.name miner2 \
 		--wallet.name $(coldkey) \
 		--wallet.hotkey miner2 \
-		--network $(network) \
+		--subtensor.chain_endpoint $(network) \
 		--axon.port 30337 \
 		--netuid $(netuid) \
 		--logging.level $(logging_level) \
