@@ -58,4 +58,3 @@ miner2:
 		--logging.level $(logging_level) \
 		--timeout 16 \
 		--forward_function forward_bad
-

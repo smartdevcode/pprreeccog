@@ -5,8 +5,8 @@ from typing import Optional
 
 import bittensor as bt
 import git
-from numpy import argsort, array, concatenate, cumsum, empty_like
 import requests
+from numpy import argsort, array, concatenate, cumsum, empty_like
 
 from precog.utils.classes import NestedNamespace
 
