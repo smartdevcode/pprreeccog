@@ -144,10 +144,13 @@ class weight_setter:
                     "Failed to set weights this iteration with message:",
                     msg,
                 )
-        self.current_block = self.subtensor.get_current_block()
-        self.blocks_since_last_update = (
-            self.current_block - self.node_query("SubtensorModule", "LastUpdate", [self.config.netuid])[self.my_uid]
-        )
+        try:
+            self.current_block = self.subtensor.get_current_block()
+            self.blocks_since_last_update = (
+                self.current_block - self.node_query("SubtensorModule", "LastUpdate", [self.config.netuid])[self.my_uid]
+            )
+        except Exception:
+            bt.logging.error("Failed to get current block, skipping block update")
 
     async def scheduled_prediction_request(self):
         if not hasattr(self, "timestamp"):

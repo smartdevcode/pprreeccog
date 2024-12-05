@@ -13,9 +13,9 @@ def setup_bittensor_objects(self):
         # if chain endpoint is set, overwrite network arg
         self.config.subtensor.network = self.config.subtensor.chain_endpoint
     # Initialize subtensor.
-    self.subtensor = bt.subtensor(config=self.config, network=self.config.subtensor.network)
+    self.subtensor = bt.subtensor(config=self.config)
     self.metagraph = self.subtensor.metagraph(self.config.netuid)
-    self.wallet = bt.wallet(name=self.config.wallet.name, hotkey=self.config.wallet.hotkey)
+    self.wallet = bt.wallet(config=self.config)
     self.dendrite = bt.dendrite(wallet=self.wallet)
     self.axon = bt.axon(wallet=self.wallet, config=self.config, port=self.config.axon.port)
     # Connect the validator to the network.
