@@ -9,7 +9,7 @@ def setup_bittensor_objects(self):
         self.config.chain_endpoint = bt.subtensor.determine_chain_endpoint_and_network(self.config.network)[1]
     else:
         # if chain endpoint is set, overwrite network arg
-        self.config.network = self.config.subtensor.chain_endpoint
+        self.config.network = self.config.chain_endpoint
     # Initialize subtensor.
     self.subtensor = bt.subtensor(config=self.config, network=self.config.network)
     self.metagraph = self.subtensor.metagraph(self.config.netuid)
