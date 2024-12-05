@@ -47,6 +47,7 @@ class weight_setter:
             self.current_block - self.node_query("SubtensorModule", "LastUpdate", [self.config.netuid])[self.my_uid]
         )
         self.tempo = self.node_query("SubtensorModule", "Tempo", [self.config.netuid])
+        bt.logging.debug(f"Config:{self.config}")
         if self.config.wandb_on:
             setup_wandb(self)
         self.stop_event = asyncio.Event()
@@ -135,7 +136,6 @@ class weight_setter:
                 uids=uint_uids,
                 weights=uint_weights,
                 wait_for_inclusion=True,
-                wait_for_finalization=True,
                 version_key=__spec_version__,
             )
             if result:
