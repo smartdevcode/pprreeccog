@@ -80,6 +80,7 @@ class weight_setter:
         """Resyncs the metagraph and updates the hotkeys and moving averages based on the new metagraph."""
         self.blocks_since_sync = self.current_block - self.last_sync
         if self.blocks_since_sync >= self.resync_metagraph_rate or force:
+            self.subtensor = bt.subtensor(config=self.config, network=self.config.subtensor.chain_endpoint)
             bt.logging.info("Syncing Metagraph...")
             self.metagraph.sync(subtensor=self.subtensor)
             bt.logging.info("Metagraph updated, re-syncing hotkeys, dendrite pool and moving averages")
