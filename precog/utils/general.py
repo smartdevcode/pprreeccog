@@ -84,3 +84,19 @@ def get_version() -> Optional[str]:
         raise Exception("Version information not found")
 
     return version_match.group()
+
+
+def rank(vector):
+    if vector is None or len(vector) <= 1:
+        return np.array([0])
+    else:
+        # Sort the array and get the indices that would sort it
+        sorted_indices = np.argsort(vector)
+        sorted_vector = vector[sorted_indices]
+        # Create a mask for where each new unique value starts in the sorted array
+        unique_mask = np.concatenate(([True], sorted_vector[1:] != sorted_vector[:-1]))
+        # Use cumulative sum of the unique mask to get the ranks, then assign back in original order
+        ranks = np.cumsum(unique_mask) - 1
+        rank_vector = np.empty_like(vector, dtype=int)
+        rank_vector[sorted_indices] = ranks
+        return rank_vector

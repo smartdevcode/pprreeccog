@@ -5,6 +5,7 @@ import bittensor as bt
 import numpy as np
 
 from precog.protocol import Challenge
+from precog.utils.general import rank
 from precog.utils.timestamp import align_timepoints, get_now, mature_dictionary, round_minute_down
 
 
@@ -47,22 +48,6 @@ def calc_rewards(
     interval_ranks = rank(-np.array(interval_errors))  # 1 is best, 0 is worst, so flip it
     rewards = (decayed_weights[point_ranks] + decayed_weights[interval_ranks]) / 2
     return rewards
-
-
-def rank(vector):
-    if vector is None or len(vector) <= 1:
-        return np.array([0])
-    else:
-        # Sort the array and get the indices that would sort it
-        sorted_indices = np.argsort(vector)
-        sorted_vector = vector[sorted_indices]
-        # Create a mask for where each new unique value starts in the sorted array
-        unique_mask = np.concatenate(([True], sorted_vector[1:] != sorted_vector[:-1]))
-        # Use cumulative sum of the unique mask to get the ranks, then assign back in original order
-        ranks = np.cumsum(unique_mask) - 1
-        rank_vector = np.empty_like(vector, dtype=int)
-        rank_vector[sorted_indices] = ranks
-        return rank_vector
 
 
 def interval_error(intervals, cm_prices):

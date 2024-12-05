@@ -1,7 +1,19 @@
-network = ws://127.0.0.1:9944
-netuid = 1
+## Network Parameters ##
+finney = wss://entrypoint-finney.opentensor.ai:443
+testnet = wss://test.finney.opentensor.ai:443
+locanet = ws://127.0.0.1:9944
+
+testnet_netuid = 256
+localnet_netuid = 1
 logging_level = trace # options= ['info', 'debug', 'trace']
-coldkey = cm-owner
+
+netuid = $(testnet_netuid)
+network = $(testnet)
+
+## User Parameters
+coldkey = default
+validator_hotkey = validator
+miner_hotkey = miner
 
 metagraph:
 	btcli subnet metagraph --netuid $(netuid) --subtensor.chain_endpoint $(network)
@@ -16,19 +28,9 @@ validator:
 	python start_validator.py \
 		--neuron.name validator \
 		--wallet.name $(coldkey) \
-		--wallet.hotkey validator \
-		--subtensor.chain_endpoint $(network) \
+		--wallet.hotkey $(validator_hotkey) \
+		--network $(network) \
 		--axon.port 30335 \
-		--netuid $(netuid) \
-		--logging.level $(logging_level)
-
-validator2:
-	python start_validator.py \
-		--neuron.name validator2 \
-		--wallet.name $(coldkey) \
-		--wallet.hotkey validator2 \
-		--subtensor.chain_endpoint $(network) \
-		--axon.port 30339 \
 		--netuid $(netuid) \
 		--logging.level $(logging_level)
 
@@ -36,8 +38,8 @@ miner:
 	python start_miner.py \
 		--neuron.name miner \
 		--wallet.name $(coldkey) \
-		--wallet.hotkey miner \
-		--subtensor.chain_endpoint $(network) \
+		--wallet.hotkey $(miner_hotkey) \
+		--network $(network) \
 		--axon.port 30336 \
 		--netuid $(netuid) \
 		--logging.level $(logging_level) \
@@ -49,31 +51,10 @@ miner2:
 		--neuron.name miner2 \
 		--wallet.name $(coldkey) \
 		--wallet.hotkey miner2 \
-		--subtensor.chain_endpoint $(network) \
+		--network $(network) \
 		--axon.port 30337 \
 		--netuid $(netuid) \
 		--logging.level $(logging_level) \
 		--timeout 16 \
 		--forward_function forward_bad
 
-miner3:
-	python start_miner.py \
-		--neuron.name miner3 \
-		--wallet.name $(coldkey) \
-		--wallet.hotkey miner3 \
-		--subtensor.chain_endpoint $(network) \
-		--axon.port 30338 \
-		--netuid $(netuid) \
-		--logging.level $(logging_level) \
-		--timeout 16 \
-		--forward_function forward
-
-setup_local:
-	btcli wallet faucet --wallet.name $(coldkey) --subtensor.chain_endpoint $(network) ;\
-	btcli subnet create --wallet.name $(coldkey) --subtensor.chain_endpoint $(network) ;\
-	btcli subnet register \
-		--wallet.name $(coldkey) \
-		--wallet.hotkey validator \
-		--netuid $(netuid)
-		--subtensor.chain_endpoint $(network) ;\
-	btcli stake add --wallet.name $(coldkey) --wallet.hotkey validator --amount 1024 ;\
