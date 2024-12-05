@@ -51,11 +51,9 @@ class weight_setter:
             setup_wandb(self)
         self.stop_event = asyncio.Event()
         bt.logging.info("Setup complete, starting loop")
-        self.loop.create_task(
-            loop_handler(self.scheduled_prediction_request, sleep_time=self.config.print_cadence)
-        )
-        self.loop.create_task(loop_handler(self.resync_metagraph, sleep_time=self.resync_metagraph_rate))
-        self.loop.create_task(loop_handler(self.set_weights, sleep_time=self.set_weights_rate))
+        self.loop.create_task(loop_handler(self, self.scheduled_prediction_request, sleep_time=self.config.print_cadence))
+        self.loop.create_task(loop_handler(self, self.resync_metagraph, sleep_time=self.resync_metagraph_rate))
+        self.loop.create_task(loop_handler(self, self.set_weights, sleep_time=self.set_weights_rate))
 
     def __exit__(self, exc_type, exc_value, traceback):
         self.save_state()
