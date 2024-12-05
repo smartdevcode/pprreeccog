@@ -44,6 +44,7 @@ miner:
 		--netuid $(netuid) \
 		--logging.level $(logging_level) \
 		--timeout 16 \
+		--vpermit_tao_limit 2 \
 		--forward_function forward
 
 miner2:
