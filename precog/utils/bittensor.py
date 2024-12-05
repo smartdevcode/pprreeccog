@@ -13,7 +13,7 @@ def setup_bittensor_objects(self):
         # if chain endpoint is set, overwrite network arg
         self.config.subtensor.network = self.config.subtensor.chain_endpoint
     # Initialize subtensor.
-    self.subtensor = bt.subtensor(config=self.config)
+    self.subtensor = bt.subtensor(config=self.config, chain_endpoint=self.config.subtensor.chain_endpoint)
     self.metagraph = self.subtensor.metagraph(self.config.netuid)
     self.wallet = bt.wallet(config=self.config)
     self.dendrite = bt.dendrite(wallet=self.wallet)
