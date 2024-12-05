@@ -27,9 +27,11 @@ def parse_arguments(parser: Optional[argparse.ArgumentParser] = None):
     """
     if parser is None:
         parser = argparse.ArgumentParser(description="Configuration")
-    parser.add_argument("--chain_endpoint", type=str, default=None)  # for testnet: wss://test.finney.opentensor.ai:443
     parser.add_argument(
-        "--network",
+        "--subtensor.chain_endpoint", type=str, default=None
+    )  # for testnet: wss://test.finney.opentensor.ai:443
+    parser.add_argument(
+        "--subtensor.network",
         choices=["finney", "test", "local"],
         default="finney",
     )

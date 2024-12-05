@@ -8,7 +8,7 @@ localnet_netuid = 1
 logging_level = trace # options= ['info', 'debug', 'trace']
 
 netuid = $(testnet_netuid)
-network = test
+network = $(testnet)
 
 ## User Parameters
 coldkey = default
@@ -29,7 +29,7 @@ validator:
 		--neuron.name validator \
 		--wallet.name $(coldkey) \
 		--wallet.hotkey $(validator_hotkey) \
-		--network $(network) \
+		--subtensor.network $(network) \
 		--axon.port 30335 \
 		--netuid $(netuid) \
 		--logging.level $(logging_level)
@@ -39,7 +39,7 @@ miner:
 		--neuron.name miner \
 		--wallet.name $(coldkey) \
 		--wallet.hotkey $(miner_hotkey) \
-		--network $(network) \
+		--subtensor.network $(network) \
 		--axon.port 30336 \
 		--netuid $(netuid) \
 		--logging.level $(logging_level) \
