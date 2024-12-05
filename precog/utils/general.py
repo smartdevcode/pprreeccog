@@ -1,9 +1,11 @@
 import argparse
+import asyncio
 import re
 from typing import Optional
 
 import bittensor as bt
 import git
+from numpy import argsort, array, concatenate, cumsum, empty_like
 import requests
 
 from precog.utils.classes import NestedNamespace
@@ -88,15 +90,34 @@ def get_version() -> Optional[str]:
 
 def rank(vector):
     if vector is None or len(vector) <= 1:
-        return np.array([0])
+        return array([0])
     else:
         # Sort the array and get the indices that would sort it
-        sorted_indices = np.argsort(vector)
+        sorted_indices = argsort(vector)
         sorted_vector = vector[sorted_indices]
         # Create a mask for where each new unique value starts in the sorted array
-        unique_mask = np.concatenate(([True], sorted_vector[1:] != sorted_vector[:-1]))
+        unique_mask = concatenate(([True], sorted_vector[1:] != sorted_vector[:-1]))
         # Use cumulative sum of the unique mask to get the ranks, then assign back in original order
-        ranks = np.cumsum(unique_mask) - 1
-        rank_vector = np.empty_like(vector, dtype=int)
+        ranks = cumsum(unique_mask) - 1
+        rank_vector = empty_like(vector, dtype=int)
         rank_vector[sorted_indices] = ranks
         return rank_vector
+
+
+async def loop_handler(self, func, sleep_time=120):
+    try:
+        while not self.stop_event.is_set():
+            async with self.lock:
+                await func()
+            await asyncio.sleep(sleep_time)
+    except asyncio.CancelledError:
+        bt.logging.error(f"{func.__name__} cancelled")
+        raise
+    except KeyboardInterrupt:
+        raise
+    except Exception as e:
+        bt.logging.error(f"{func.__name__} raised error: {e}")
+        raise
+    finally:
+        async with self.lock:
+            self.stop_event.set()
