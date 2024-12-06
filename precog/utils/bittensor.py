@@ -46,7 +46,7 @@ def setup_bittensor_objects(self):
 
 def print_info(self) -> None:
     if self.config.neuron.type == "Validator":
-        weight_timing = self.set_weights_rate - self.blocks_since_last_update
+        weight_timing = self.hyperparameters.weights_rate_limit - self.blocks_since_last_update
         if weight_timing <= 0:
             weight_timing = "a few"  # hashtag aesthetic af
         log = (
