@@ -24,8 +24,6 @@ class weight_setter:
         self.lock = asyncio.Lock()
         setup_bittensor_objects(self)
         self.timezone = timezone("UTC")
-        self.prediction_interval = self.config.prediction_interval  # in minutes
-        self.N_TIMEPOINTS = self.config.N_TIMEPOINTS  # number of timepoints to predict
         self.hyperparameters = func_with_retry(self.subtensor.get_subnet_hyperparameters, netuid=self.config.netuid)
         self.resync_metagraph_rate = 600  # in seconds
         bt.logging.info(
@@ -61,6 +59,8 @@ class weight_setter:
             self.__reset_instance__()
         except Exception as e:
             bt.logging.error(f"Error on loop: {e}")
+        finally:
+            self.__exit__(None, None, None)
 
     def __exit__(self, exc_type, exc_value, traceback):
         self.save_state()
@@ -116,10 +116,10 @@ class weight_setter:
 
     async def set_weights(self):
         try:
-            self.blocks_since_last_update = self.subtensor.blocks_since_last_update(
-                netuid=self.config.netuid, uid=self.my_uid
+            self.blocks_since_last_update = func_with_retry(
+                self.subtensor.blocks_since_last_update, netuid=self.config.netuid, uid=self.my_uid
             )
-            self.current_block = self.subtensor.get_current_block()
+            self.current_block = func_with_retry(self.subtensor.get_current_block)
         except Exception as e:
             bt.logging.error(f"Failed to get current block with error {e}, skipping block update")
         if self.blocks_since_last_update >= self.hyperparameters.weights_rate_limit:
