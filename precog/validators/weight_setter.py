@@ -43,7 +43,7 @@ class weight_setter:
             self.load_state()
         self.current_block = self.subtensor.get_current_block()
         self.blocks_since_last_update = self.subtensor.blocks_since_last_update(
-            neutid=self.config.netuid, uid=self.my_uid
+            netuid=self.config.netuid, uid=self.my_uid
         )
         if self.config.wandb_on:
             setup_wandb(self)
@@ -120,7 +120,7 @@ class weight_setter:
         try:
             self.current_block = self.subtensor.get_current_block()
             self.blocks_since_last_update = self.subtensor.blocks_since_last_update(
-                neutid=self.config.netuid, uid=self.my_uid
+                netuid=self.config.netuid, uid=self.my_uid
             )
         except Exception:
             bt.logging.error("Failed to get current block, skipping block update")
