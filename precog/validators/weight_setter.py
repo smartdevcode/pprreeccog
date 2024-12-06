@@ -27,7 +27,7 @@ class weight_setter:
         self.prediction_interval = self.config.prediction_interval  # in minutes
         self.N_TIMEPOINTS = self.config.N_TIMEPOINTS  # number of timepoints to predict
         self.last_sync = 0
-        self.set_weights_rate = 150  # in blocks
+        self.set_weights_rate = 100  # in blocks
         self.resync_metagraph_rate = 600  # in seconds
         bt.logging.info(
             f"Running validator for subnet: {self.config.netuid} on network: {self.config.subtensor.network}"
@@ -41,6 +41,7 @@ class weight_setter:
             self.save_state()
         else:
             self.load_state()
+        self.current_block = self.subtensor.get_current_block()
         self.blocks_since_last_update = self.subtensor.blocks_since_last_update(
             netuid=self.config.netuid, uid=self.my_uid
         )
@@ -118,6 +119,7 @@ class weight_setter:
             self.blocks_since_last_update = self.subtensor.blocks_since_last_update(
                 netuid=self.config.netuid, uid=self.my_uid
             )
+            self.current_block = self.subtensor.get_current_block()
         except Exception:
             bt.logging.error("Failed to get current block, skipping block update")
         if self.blocks_since_last_update >= self.set_weights_rate:
