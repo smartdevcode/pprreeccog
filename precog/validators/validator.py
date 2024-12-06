@@ -2,6 +2,7 @@ import asyncio
 from pathlib import Path
 
 import bittensor as bt
+import websocket
 
 from precog.utils.classes import Config
 from precog.utils.general import parse_arguments
@@ -26,6 +27,9 @@ class Validator:
             loop.run_forever()
         except BrokenPipeError:
             bt.logging.error("Recieved a Broken Pipe substrate error")
+            asyncio.run(self.reset_instance())
+        except websocket._exceptions.WebSocketConnectionClosedException:
+            bt.logging.error("Recieved a websocket closed error, restarting validator")
             asyncio.run(self.reset_instance())
         except Exception as e:
             bt.logging.error(f"Unhandled exception: {e}")
