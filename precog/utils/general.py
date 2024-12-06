@@ -132,9 +132,9 @@ def func_with_retry(func: Callable, max_attempts: int = 3, delay: float = 1, *ar
             return result
         except Exception as e:
             attempt += 1
-            print(f"Attempt {attempt} failed with error: {e}")
+            bt.logging.debug(f"Function {func} failed: Attempt {attempt} of {max_attempts} with error: {e}")
             if attempt == max_attempts:
+                bt.logging.error(f"Function {func} failed {max_attempts} times, skipping.")
                 raise
             else:
-                print(f"Retrying... (Attempt {attempt + 1}) in {delay} seconds")
                 time.sleep(delay)
