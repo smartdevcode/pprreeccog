@@ -3,9 +3,9 @@ import os
 import pickle
 
 import bittensor as bt
+import websocket
 from numpy import array
 from pytz import timezone
-from substrateinterface import SubstrateInterface
 
 from precog import __spec_version__
 from precog.protocol import Challenge
@@ -41,12 +41,10 @@ class weight_setter:
             self.save_state()
         else:
             self.load_state()
-        self.node = SubstrateInterface(url=self.config.subtensor.chain_endpoint)
         self.current_block = self.subtensor.get_current_block()
-        self.blocks_since_last_update = (
-            self.current_block - self.node_query("SubtensorModule", "LastUpdate", [self.config.netuid])[self.my_uid]
+        self.blocks_since_last_update = self.subtensor.blocks_since_last_update(
+            neutid=self.config.netuid, uid=self.my_uid
         )
-        self.tempo = self.node_query("SubtensorModule", "Tempo", [self.config.netuid])
         if self.config.wandb_on:
             setup_wandb(self)
         self.stop_event = asyncio.Event()
@@ -58,9 +56,10 @@ class weight_setter:
         self.loop.create_task(loop_handler(self, self.set_weights, sleep_time=self.set_weights_rate))
         try:
             self.loop.run_forever()
+        except websocket._exceptions.WebSocketConnectionClosedException:
+            self.__reset_instance__()
         except Exception as e:
             bt.logging.error(f"Error on loop: {e}")
-            self.__reset_instance__()
 
     def __exit__(self, exc_type, exc_value, traceback):
         self.save_state()
@@ -117,19 +116,12 @@ class weight_setter:
         )
         return responses, timestamp
 
-    def node_query(self, module, method, params):
-        try:
-            result = self.node.query(module, method, params).value
-        except Exception:
-            # reinitilize node
-            self.node = SubstrateInterface(url=self.subtensor.chain_endpoint)
-            result = self.node.query(module, method, params).value
-        return result
-
     async def set_weights(self):
         try:
             self.current_block = self.subtensor.get_current_block()
-            self.blocks_since_last_update = self.current_block - self.last_update
+            self.blocks_since_last_update = self.subtensor.blocks_since_last_update(
+                neutid=self.config.netuid, uid=self.my_uid
+            )
         except Exception:
             bt.logging.error("Failed to get current block, skipping block update")
         if self.blocks_since_last_update >= self.set_weights_rate:
@@ -155,12 +147,6 @@ class weight_setter:
             )
             if result:
                 bt.logging.success("✅ Set Weights on chain successfully!")
-                try:
-                    self.last_update = self.node_query("SubtensorModule", "LastUpdate", [self.config.netuid])[
-                        self.my_uid
-                    ]
-                except Exception:
-                    pass
             else:
                 bt.logging.debug(
                     "Failed to set weights this iteration with message:",
