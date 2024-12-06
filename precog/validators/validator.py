@@ -1,9 +1,6 @@
 import asyncio
 from pathlib import Path
 
-import bittensor as bt
-import websocket
-
 from precog.utils.classes import Config
 from precog.utils.general import parse_arguments
 from precog.validators.weight_setter import weight_setter
@@ -23,18 +20,6 @@ class Validator:
     async def main(self):
         loop = asyncio.get_event_loop()
         self.weight_setter = weight_setter(config=self.config, loop=loop)
-        try:
-            loop.run_forever()
-        except BrokenPipeError:
-            bt.logging.error("Recieved a Broken Pipe substrate error")
-            asyncio.run(self.reset_instance())
-        except websocket._exceptions.WebSocketConnectionClosedException:
-            bt.logging.error("Recieved a websocket closed error, restarting validator")
-            asyncio.run(self.reset_instance())
-        except Exception as e:
-            bt.logging.error(f"Unhandled exception: {e}")
-        finally:
-            bt.logging.info("Exiting Validator")
 
     async def reset_instance(self):
         self.__init__()

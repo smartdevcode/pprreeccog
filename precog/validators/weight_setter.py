@@ -56,6 +56,11 @@ class weight_setter:
         )
         self.loop.create_task(loop_handler(self, self.resync_metagraph, sleep_time=self.resync_metagraph_rate))
         self.loop.create_task(loop_handler(self, self.set_weights, sleep_time=self.set_weights_rate))
+        try:
+            self.loop.run_forever()
+        except Exception as e:
+            bt.logging.error(f"Error on loop: {e}")
+            self.__reset_instance__()
 
     def __exit__(self, exc_type, exc_value, traceback):
         self.save_state()
@@ -63,10 +68,15 @@ class weight_setter:
             pending = asyncio.all_tasks(self.loop)
             for task in pending:
                 task.cancel()
-            asyncio.gather(*pending, return_exceptions=True)
         except Exception as e:
             bt.logging.error(f"Error on __exit__ function: {e}")
-        self.loop.stop()
+        finally:
+            asyncio.gather(*pending, return_exceptions=True)
+            self.loop.stop()
+
+    def __reset_instance__(self):
+        self.__exit__(None, None, None)
+        self.__init__(self.config, self.loop)
 
     async def get_available_uids(self):
         miner_uids = []
@@ -119,9 +129,7 @@ class weight_setter:
     async def set_weights(self):
         try:
             self.current_block = self.subtensor.get_current_block()
-            self.blocks_since_last_update = (
-                self.current_block - self.node_query("SubtensorModule", "LastUpdate", [self.config.netuid])[self.my_uid]
-            )
+            self.blocks_since_last_update = self.current_block - self.last_update
         except Exception:
             bt.logging.error("Failed to get current block, skipping block update")
         if self.blocks_since_last_update >= self.set_weights_rate:
@@ -147,6 +155,12 @@ class weight_setter:
             )
             if result:
                 bt.logging.success("✅ Set Weights on chain successfully!")
+                try:
+                    self.last_update = self.node_query("SubtensorModule", "LastUpdate", [self.config.netuid])[
+                        self.my_uid
+                    ]
+                except Exception:
+                    pass
             else:
                 bt.logging.debug(
                     "Failed to set weights this iteration with message:",
