@@ -28,7 +28,7 @@ class weight_setter:
         self.N_TIMEPOINTS = self.config.N_TIMEPOINTS  # number of timepoints to predict
         self.last_sync = 0
         self.set_weights_rate = 150  # in blocks
-        self.resync_metagraph_rate = 25  # in blocks
+        self.resync_metagraph_rate = 600  # in seconds
         bt.logging.info(
             f"Running validator for subnet: {self.config.netuid} on network: {self.config.subtensor.network}"
         )
@@ -41,7 +41,6 @@ class weight_setter:
             self.save_state()
         else:
             self.load_state()
-        self.current_block = self.subtensor.get_current_block()
         self.blocks_since_last_update = self.subtensor.blocks_since_last_update(
             netuid=self.config.netuid, uid=self.my_uid
         )
@@ -57,6 +56,7 @@ class weight_setter:
         try:
             self.loop.run_forever()
         except websocket._exceptions.WebSocketConnectionClosedException:
+            bt.logging.info("Caught websocket connection closed exception")
             self.__reset_instance__()
         except Exception as e:
             bt.logging.error(f"Error on loop: {e}")
@@ -85,25 +85,22 @@ class weight_setter:
                 miner_uids.append(uid)
         return miner_uids
 
-    async def resync_metagraph(self, force=False):
+    async def resync_metagraph(self):
         """Resyncs the metagraph and updates the hotkeys and moving averages based on the new metagraph."""
-        self.blocks_since_sync = self.current_block - self.last_sync
-        if self.blocks_since_sync >= self.resync_metagraph_rate or force:
-            self.subtensor = bt.subtensor(config=self.config, network=self.config.subtensor.chain_endpoint)
-            bt.logging.info("Syncing Metagraph...")
-            self.metagraph.sync(subtensor=self.subtensor)
-            bt.logging.info("Metagraph updated, re-syncing hotkeys, dendrite pool and moving averages")
-            # Zero out all hotkeys that have been replaced.
-            self.available_uids = asyncio.run(self.get_available_uids())
-            for uid, hotkey in enumerate(self.metagraph.hotkeys):
-                if (uid not in self.MinerHistory and uid in self.available_uids) or self.hotkeys[uid] != hotkey:
-                    bt.logging.info(f"Replacing hotkey on {uid} with {self.metagraph.hotkeys[uid]}")
-                    self.hotkeys[uid] = hotkey
-                    self.scores[uid] = 0  # hotkey has been replaced
-                    self.MinerHistory[uid] = MinerHistory(uid, timezone=self.timezone)
-                    self.moving_average_scores[uid] = 0
-            self.last_sync = self.subtensor.get_current_block()
-            self.save_state()
+        self.subtensor = bt.subtensor(config=self.config, network=self.config.subtensor.chain_endpoint)
+        bt.logging.info("Syncing Metagraph...")
+        self.metagraph.sync(subtensor=self.subtensor)
+        bt.logging.info("Metagraph updated, re-syncing hotkeys, dendrite pool and moving averages")
+        # Zero out all hotkeys that have been replaced.
+        self.available_uids = asyncio.run(self.get_available_uids())
+        for uid, hotkey in enumerate(self.metagraph.hotkeys):
+            if (uid not in self.MinerHistory and uid in self.available_uids) or self.hotkeys[uid] != hotkey:
+                bt.logging.info(f"Replacing hotkey on {uid} with {self.metagraph.hotkeys[uid]}")
+                self.hotkeys[uid] = hotkey
+                self.scores[uid] = 0  # hotkey has been replaced
+                self.MinerHistory[uid] = MinerHistory(uid, timezone=self.timezone)
+                self.moving_average_scores[uid] = 0
+        self.save_state()
 
     def query_miners(self):
         timestamp = get_now().isoformat()
@@ -118,7 +115,6 @@ class weight_setter:
 
     async def set_weights(self):
         try:
-            self.current_block = self.subtensor.get_current_block()
             self.blocks_since_last_update = self.subtensor.blocks_since_last_update(
                 netuid=self.config.netuid, uid=self.my_uid
             )
