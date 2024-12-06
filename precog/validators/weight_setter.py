@@ -120,8 +120,8 @@ class weight_setter:
                 netuid=self.config.netuid, uid=self.my_uid
             )
             self.current_block = self.subtensor.get_current_block()
-        except Exception:
-            bt.logging.error("Failed to get current block, skipping block update")
+        except Exception as e:
+            bt.logging.error(f"Failed to get current block with error {e}, skipping block update")
         if self.blocks_since_last_update >= self.set_weights_rate:
             uids = array(self.available_uids)
             weights = [self.moving_average_scores[uid] for uid in self.available_uids]
@@ -145,6 +145,7 @@ class weight_setter:
             )
             if result:
                 bt.logging.success("✅ Set Weights on chain successfully!")
+                self.blocks_since_last_update = 0
             else:
                 bt.logging.debug(
                     "Failed to set weights this iteration with message:",
