@@ -63,7 +63,7 @@ class weight_setter:
             pending = asyncio.all_tasks(self.loop)
             for task in pending:
                 task.cancel()
-            asyncio.gather(*pending)
+            asyncio.gather(*pending, return_exceptions=True)
         except Exception as e:
             bt.logging.error(f"Error on __exit__ function: {e}")
         self.loop.stop()

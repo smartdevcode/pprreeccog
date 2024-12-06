@@ -117,7 +117,7 @@ async def loop_handler(self, func, sleep_time=120):
         raise
     except Exception as e:
         bt.logging.error(f"{func.__name__} raised error: {e}")
-        raise
+        raise e
     finally:
         async with self.lock:
             self.stop_event.set()
