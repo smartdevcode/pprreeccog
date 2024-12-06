@@ -1,6 +1,7 @@
 import argparse
 import asyncio
 import re
+import time
 from typing import Any, Callable, Optional
 
 import bittensor as bt
@@ -123,7 +124,7 @@ async def loop_handler(self, func: Callable, sleep_time: float = 120):
             self.stop_event.set()
 
 
-def func_with_retry(func: Callable, max_attempts: int = 3, delay: float = 2, *args, **kwargs) -> Any:
+def func_with_retry(func: Callable, max_attempts: int = 3, delay: float = 1, *args, **kwargs) -> Any:
     attempt = 0
     while attempt < max_attempts:
         try:
@@ -135,4 +136,5 @@ def func_with_retry(func: Callable, max_attempts: int = 3, delay: float = 2, *ar
             if attempt == max_attempts:
                 raise
             else:
-                print(f"Retrying... (Attempt {attempt + 1})")
+                print(f"Retrying... (Attempt {attempt + 1}) in {delay} seconds")
+                time.sleep(delay)
