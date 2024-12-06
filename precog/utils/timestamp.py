@@ -21,12 +21,12 @@ def get_now() -> datetime:
     return datetime.now(get_timezone())
 
 
-def get_before(minutes: int = 5) -> datetime:
+def get_before(minutes: int = 5, seconds: int = 0) -> datetime:
     """
     Get the datetime x minutes before now
     """
     now = get_now()
-    return now - timedelta(minutes=minutes)
+    return now - timedelta(minutes=minutes, seconds=seconds)
 
 
 def get_midnight() -> datetime:
@@ -66,7 +66,7 @@ def datetime_to_iso8601(timestamp: datetime) -> str:
     """
     Convert datetime to iso 8601 string
     """
-    return timestamp.isoformat()
+    return timestamp.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
 
 def iso8601_to_datetime(timestamp: str) -> datetime:
