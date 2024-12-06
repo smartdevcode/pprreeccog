@@ -24,6 +24,8 @@ class weight_setter:
         self.lock = asyncio.Lock()
         setup_bittensor_objects(self)
         self.timezone = timezone("UTC")
+        self.prediction_interval = self.config.prediction_interval  # in seconds
+        self.N_TIMEPOINTS = self.config.N_TIMEPOINTS  # number of timepoints to predict
         self.hyperparameters = func_with_retry(self.subtensor.get_subnet_hyperparameters, netuid=self.config.netuid)
         self.resync_metagraph_rate = 600  # in seconds
         bt.logging.info(
