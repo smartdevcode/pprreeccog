@@ -11,7 +11,7 @@ from precog import __spec_version__
 from precog.protocol import Challenge
 from precog.utils.bittensor import check_uid_availability, print_info, setup_bittensor_objects
 from precog.utils.classes import MinerHistory
-from precog.utils.general import loop_handler
+from precog.utils.general import func_with_retry, loop_handler
 from precog.utils.timestamp import elapsed_seconds, get_before, get_now, is_query_time, iso8601_to_datetime
 from precog.utils.wandb import log_wandb, setup_wandb
 from precog.validators.reward import calc_rewards
@@ -26,8 +26,8 @@ class weight_setter:
         self.timezone = timezone("UTC")
         self.prediction_interval = self.config.prediction_interval  # in minutes
         self.N_TIMEPOINTS = self.config.N_TIMEPOINTS  # number of timepoints to predict
+        self.hyperparams = func_with_retry(self.subtensor.get_subnet_hyperparameters, netuid=self.config.netuid)
         self.last_sync = 0
-        self.set_weights_rate = 100  # in blocks
         self.resync_metagraph_rate = 600  # in seconds
         bt.logging.info(
             f"Running validator for subnet: {self.config.netuid} on network: {self.config.subtensor.network}"
@@ -53,10 +53,11 @@ class weight_setter:
             loop_handler(self, self.scheduled_prediction_request, sleep_time=self.config.print_cadence)
         )
         self.loop.create_task(loop_handler(self, self.resync_metagraph, sleep_time=self.resync_metagraph_rate))
-        self.loop.create_task(loop_handler(self, self.set_weights, sleep_time=self.set_weights_rate))
+        self.loop.create_task(loop_handler(self, self.set_weights, sleep_time=self.hyperparameters.weights_rate_limit))
         try:
             self.loop.run_forever()
         except websocket._exceptions.WebSocketConnectionClosedException:
+            # TODO: Exceptions are not being caught in this loop
             bt.logging.info("Caught websocket connection closed exception")
             self.__reset_instance__()
         except Exception as e:
@@ -122,7 +123,7 @@ class weight_setter:
             self.current_block = self.subtensor.get_current_block()
         except Exception as e:
             bt.logging.error(f"Failed to get current block with error {e}, skipping block update")
-        if self.blocks_since_last_update >= self.set_weights_rate:
+        if self.blocks_since_last_update >= self.hyperparameters.weights_rate_limit:
             uids = array(self.available_uids)
             weights = [self.moving_average_scores[uid] for uid in self.available_uids]
             for i, j in zip(weights, self.available_uids):

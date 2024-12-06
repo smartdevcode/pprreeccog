@@ -1,7 +1,7 @@
 import argparse
 import asyncio
 import re
-from typing import Optional
+from typing import Any, Callable, Optional
 
 import bittensor as bt
 import git
@@ -104,7 +104,7 @@ def rank(vector):
         return rank_vector
 
 
-async def loop_handler(self, func, sleep_time=120):
+async def loop_handler(self, func: Callable, sleep_time: float = 120):
     try:
         while not self.stop_event.is_set():
             async with self.lock:
@@ -121,3 +121,18 @@ async def loop_handler(self, func, sleep_time=120):
     finally:
         async with self.lock:
             self.stop_event.set()
+
+
+def func_with_retry(func: Callable, max_attempts: int = 3, delay: float = 2, *args, **kwargs) -> Any:
+    attempt = 0
+    while attempt < max_attempts:
+        try:
+            result = func(*args, **kwargs)
+            return result
+        except Exception as e:
+            attempt += 1
+            print(f"Attempt {attempt} failed with error: {e}")
+            if attempt == max_attempts:
+                raise
+            else:
+                print(f"Retrying... (Attempt {attempt + 1})")
