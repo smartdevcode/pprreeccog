@@ -27,7 +27,6 @@ class weight_setter:
         self.prediction_interval = self.config.prediction_interval  # in minutes
         self.N_TIMEPOINTS = self.config.N_TIMEPOINTS  # number of timepoints to predict
         self.hyperparameters = func_with_retry(self.subtensor.get_subnet_hyperparameters, netuid=self.config.netuid)
-        self.last_sync = 0
         self.resync_metagraph_rate = 600  # in seconds
         bt.logging.info(
             f"Running validator for subnet: {self.config.netuid} on network: {self.config.subtensor.network}"
