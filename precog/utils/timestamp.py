@@ -73,7 +73,7 @@ def iso8601_to_datetime(timestamp: str) -> datetime:
     """
     Convert iso 8601 string to datetime
     """
-    return datetime.fromisoformat(timestamp)
+    return datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%S.%fZ")
 
 
 def posix_to_datetime(timestamp: float) -> datetime:

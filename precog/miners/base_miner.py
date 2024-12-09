@@ -86,7 +86,7 @@ def get_prediction_interval(timestamp: str, point_estimate: float) -> Tuple[floa
     return lower_bound, upper_bound
 
 
-async def forward(synapse: Challenge) -> Challenge:
+def forward(synapse: Challenge) -> Challenge:
     bt.logging.info(
         f"👈 Received prediction request from: {synapse.dendrite.hotkey} for timestamp: {synapse.timestamp}"
     )
