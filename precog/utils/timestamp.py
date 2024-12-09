@@ -66,14 +66,14 @@ def datetime_to_iso8601(timestamp: datetime) -> str:
     """
     Convert datetime to iso 8601 string
     """
-    return timestamp.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+    return timestamp.isoformat()
 
 
 def iso8601_to_datetime(timestamp: str) -> datetime:
     """
     Convert iso 8601 string to datetime
     """
-    return datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%S.%fZ")
+    return datetime.fromisoformat(timestamp)
 
 
 def posix_to_datetime(timestamp: float) -> datetime:
@@ -81,6 +81,13 @@ def posix_to_datetime(timestamp: float) -> datetime:
     Convert seconds since Jan 1 1970 to datetime
     """
     return datetime.fromtimestamp(timestamp, tz=get_timezone())
+
+
+def datetime_to_CM_timestamp(timestamp: datetime) -> str:
+    """
+    Convert iso 8601 string to coinmetrics timestamp
+    """
+    return timestamp.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
 
 ###############################
@@ -155,7 +162,7 @@ def align_timepoints(filtered_pred_dict, cm_dict):
 
     Args:
         filtered_pred_dict (dict): {datetime: float} dictionary of predictions.
-        cm_data (dict): {datetime: float} dictionary of coinmetrics prices.
+        cm_data (dict): {datetime: float} dictionary of prices.
 
 
     Returns:

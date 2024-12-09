@@ -6,7 +6,7 @@ import pandas as pd
 
 from precog.protocol import Challenge
 from precog.utils.cm_data import CMData
-from precog.utils.timestamp import datetime_to_iso8601, iso8601_to_datetime
+from precog.utils.timestamp import datetime_to_CM_timestamp, iso8601_to_datetime
 
 
 def get_point_estimate(timestamp: str) -> float:
@@ -23,8 +23,8 @@ def get_point_estimate(timestamp: str) -> float:
 
     # Set the time range to be as small as possible for query speed
     # Set the start time as 2 seconds prior to the provided time
-    start_time: str = datetime_to_iso8601(iso8601_to_datetime(timestamp) - timedelta(seconds=2))
-    end_time: str = timestamp
+    start_time: str = datetime_to_CM_timestamp(iso8601_to_datetime(timestamp) - timedelta(days=1))
+    end_time: str = datetime_to_CM_timestamp(iso8601_to_datetime(timestamp))  # built-ins handle CM API's formatting
 
     # Query CM API for a pandas dataframe with only one record
     price_data: pd.DataFrame = cm.get_CM_ReferenceRate(assets="BTC", start=start_time, end=end_time)
@@ -56,8 +56,8 @@ def get_prediction_interval(timestamp: str, point_estimate: float) -> Tuple[floa
     cm = CMData()
 
     # Set the time range to be 24 hours
-    start_time: str = datetime_to_iso8601(iso8601_to_datetime(timestamp) - timedelta(days=1))
-    end_time: str = timestamp
+    start_time: str = datetime_to_CM_timestamp(iso8601_to_datetime(timestamp) - timedelta(days=1))
+    end_time: str = datetime_to_CM_timestamp(iso8601_to_datetime(timestamp))  # built-ins handle CM API's formatting
 
     # Query CM API for sample standard deviation of the 1s residuals
     historical_price_data: pd.DataFrame = cm.get_CM_ReferenceRate(
