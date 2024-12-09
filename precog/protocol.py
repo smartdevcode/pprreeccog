@@ -35,7 +35,7 @@ class Challenge(bt.Synapse):
     )
 
     # Optional request output, filled by recieving axon.
-    prediction: Optional[List[float]] = pydantic.Field(
+    prediction: Optional[float] = pydantic.Field(
         default=None,
         title="Predictions",
         description="The predictions to send to the dendrite caller",

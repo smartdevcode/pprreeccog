@@ -21,12 +21,12 @@ def get_now() -> datetime:
     return datetime.now(get_timezone())
 
 
-def get_before(minutes: int = 5) -> datetime:
+def get_before(minutes: int = 5, seconds: int = 0) -> datetime:
     """
     Get the datetime x minutes before now
     """
     now = get_now()
-    return now - timedelta(minutes=minutes)
+    return now - timedelta(minutes=minutes, seconds=seconds)
 
 
 def get_midnight() -> datetime:
@@ -81,6 +81,13 @@ def posix_to_datetime(timestamp: float) -> datetime:
     Convert seconds since Jan 1 1970 to datetime
     """
     return datetime.fromtimestamp(timestamp, tz=get_timezone())
+
+
+def datetime_to_CM_timestamp(timestamp: datetime) -> str:
+    """
+    Convert iso 8601 string to coinmetrics timestamp
+    """
+    return timestamp.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
 
 ###############################
@@ -150,13 +157,12 @@ def is_query_time(prediction_interval: int, timestamp: str, tolerance: int = 120
     return beginning_of_epoch
 
 
-def align_timepoints(filtered_pred_dict, cm_data, cm_timestamps):
+def align_timepoints(filtered_pred_dict, cm_dict):
     """Takes in a dictionary of predictions and aligns them to a list of coinmetrics prices.
 
     Args:
         filtered_pred_dict (dict): {datetime: float} dictionary of predictions.
-        cm_data (List[float]): price data from coinmetrics corresponding to the datetimes in cm_timestamps.
-        cm_timestamps (List[datetime]): timestamps corresponding to the values in cm_data.
+        cm_data (dict): {datetime: float} dictionary of prices.
 
 
     Returns:
@@ -164,23 +170,14 @@ def align_timepoints(filtered_pred_dict, cm_data, cm_timestamps):
         aligned_cm_data (List[float]): The values in cm_data where cm_timestamps matches the timestamps in filtered_pred_dict.
         aligned_timestamps (List[datetime]): The timestamps corresponding to the values in aligned_pred_values and aligned_cm_data.
     """
-    if len(cm_data) != len(cm_timestamps):
-        raise ValueError("cm_data and cm_timepoints must be of the same length.")
-
     aligned_pred_values = []
     aligned_cm_data = []
     aligned_timestamps = []
-
-    # Convert cm_timepoints to a set for faster lookup
-    cm_timestamps_set = set(cm_timestamps)
-    # Loop through filtered_pred_dict to find matching datetime keys
-    for timestamp, pred_value in filtered_pred_dict.items():
-        if timestamp in cm_timestamps_set:
-            # Find the index in cm_timepoints to get corresponding cm_data
-            index = cm_timestamps.index(timestamp)
-            aligned_pred_values.append(pred_value)
+    for timestamp, value in filtered_pred_dict.items():
+        if timestamp in cm_dict:
+            aligned_pred_values.append(value)
             aligned_timestamps.append(timestamp)
-            aligned_cm_data.append(cm_data[index])
+            aligned_cm_data.append(cm_dict[timestamp])
     return aligned_pred_values, aligned_cm_data, aligned_timestamps
 
 

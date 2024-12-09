@@ -94,7 +94,7 @@ repos:
           language: system
           pass_filenames: false
           always_run: true
-          args: [--branch, main, --branch, staging, --branch, dev]
+          args: [--branch, master, --branch, staging, --branch, dev]
       -   id: trailing-whitespace
           name: trim trailing whitespace
           description: trims trailing whitespace.
