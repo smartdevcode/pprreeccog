@@ -8,6 +8,7 @@ import bittensor as bt
 import git
 import requests
 from numpy import argsort, array, concatenate, cumsum, empty_like
+from pandas import DataFrame
 
 from precog.utils.classes import NestedNamespace
 
@@ -138,3 +139,10 @@ def func_with_retry(func: Callable, max_attempts: int = 3, delay: float = 1, *ar
                 raise
             else:
                 time.sleep(delay)
+
+
+def pd_to_dict(data: DataFrame) -> dict:
+    price_dict = {}
+    for i in range(len(data)):
+        price_dict[data.time[i].to_pydatetime()] = data.iloc[i]["ReferenceRateUSD"].item()
+    return price_dict
