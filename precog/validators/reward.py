@@ -3,9 +3,12 @@ from typing import List
 
 import bittensor as bt
 import numpy as np
+from pandas import DataFrame
 
 from precog.protocol import Challenge
-from precog.utils.timestamp import align_timepoints, get_now, mature_dictionary, round_minute_down
+from precog.utils.cm_data import CMData
+from precog.utils.general import pd_to_dict, rank
+from precog.utils.timestamp import align_timepoints, datetime_to_CM_timestamp, iso8601_to_datetime, mature_dictionary
 
 
 ################################################################################
@@ -19,21 +22,24 @@ def calc_rewards(
     decay = 0.9
     weights = np.linspace(0, len(self.available_uids) - 1, len(self.available_uids))
     decayed_weights = decay**weights
-    # cm_prices, cm_timestamps = get_cm_prices() # fake placeholder to get the past hours prices
-    cm_prices = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
-    cm_timestamps = [
-        round_minute_down(get_now()) - timedelta(minutes=(i + 1) * 5) for i in range(12)
-    ]  # placeholder to align cm price timepoints to the timestamps in history
-    cm_timestamps.reverse()
+    timestamp = responses[0].timestamp
+    cm = CMData()
+    start_time: str = datetime_to_CM_timestamp(iso8601_to_datetime(timestamp) - timedelta(hours=1))
+    end_time: str = datetime_to_CM_timestamp(iso8601_to_datetime(timestamp))  # built-ins handle CM API's formatting
+    # Query CM API for sample standard deviation of the 1s residuals
+    historical_price_data: DataFrame = cm.get_CM_ReferenceRate(
+        assets="BTC", start=start_time, end=end_time, frequency="1s"
+    )
+    cm_data = pd_to_dict(historical_price_data)
     for uid, response in zip(self.available_uids, responses):
         current_miner = self.MinerHistory[uid]
         self.MinerHistory[uid].add_prediction(response.timestamp, response.prediction, response.interval)
         prediction_dict, interval_dict = current_miner.format_predictions(response.timestamp)
         mature_time_dict = mature_dictionary(prediction_dict)
-        preds, price, aligned_pred_timestamps = align_timepoints(mature_time_dict, cm_prices, cm_timestamps)
+        preds, price, aligned_pred_timestamps = align_timepoints(mature_time_dict, cm_data)
         for i, j, k in zip(preds, price, aligned_pred_timestamps):
             bt.logging.debug(f"Prediction: {i} | Price: {j} | Aligned Prediction: {k}")
-        inters, interval_prices, aligned_int_timestamps = align_timepoints(interval_dict, cm_prices, cm_timestamps)
+        inters, interval_prices, aligned_int_timestamps = align_timepoints(interval_dict, cm_data)
         for i, j, k in zip(inters, interval_prices, aligned_int_timestamps):
             bt.logging.debug(f"Interval: {i} | Interval Price: {j} | Aligned TS: {k}")
         point_errors.append(point_error(preds, price))
@@ -47,22 +53,6 @@ def calc_rewards(
     interval_ranks = rank(-np.array(interval_errors))  # 1 is best, 0 is worst, so flip it
     rewards = (decayed_weights[point_ranks] + decayed_weights[interval_ranks]) / 2
     return rewards
-
-
-def rank(vector):
-    if vector is None or len(vector) <= 1:
-        return np.array([0])
-    else:
-        # Sort the array and get the indices that would sort it
-        sorted_indices = np.argsort(vector)
-        sorted_vector = vector[sorted_indices]
-        # Create a mask for where each new unique value starts in the sorted array
-        unique_mask = np.concatenate(([True], sorted_vector[1:] != sorted_vector[:-1]))
-        # Use cumulative sum of the unique mask to get the ranks, then assign back in original order
-        ranks = np.cumsum(unique_mask) - 1
-        rank_vector = np.empty_like(vector, dtype=int)
-        rank_vector[sorted_indices] = ranks
-        return rank_vector
 
 
 def interval_error(intervals, cm_prices):

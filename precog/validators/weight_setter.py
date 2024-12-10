@@ -3,15 +3,23 @@ import os
 import pickle
 
 import bittensor as bt
+import websocket
 from numpy import array
 from pytz import timezone
-from substrateinterface import SubstrateInterface
 
 from precog import __spec_version__
 from precog.protocol import Challenge
 from precog.utils.bittensor import check_uid_availability, print_info, setup_bittensor_objects
 from precog.utils.classes import MinerHistory
-from precog.utils.timestamp import elapsed_seconds, get_before, get_now, is_query_time, iso8601_to_datetime
+from precog.utils.general import func_with_retry, loop_handler
+from precog.utils.timestamp import (
+    datetime_to_iso8601,
+    elapsed_seconds,
+    get_before,
+    get_now,
+    is_query_time,
+    iso8601_to_datetime,
+)
 from precog.utils.wandb import log_wandb, setup_wandb
 from precog.validators.reward import calc_rewards
 
@@ -23,11 +31,10 @@ class weight_setter:
         self.lock = asyncio.Lock()
         setup_bittensor_objects(self)
         self.timezone = timezone("UTC")
-        self.prediction_interval = self.config.prediction_interval  # in minutes
+        self.prediction_interval = self.config.prediction_interval  # in seconds
         self.N_TIMEPOINTS = self.config.N_TIMEPOINTS  # number of timepoints to predict
-        self.last_sync = 0
-        self.set_weights_rate = 100  # in blocks
-        self.resync_metagraph_rate = 20  # in blocks
+        self.hyperparameters = func_with_retry(self.subtensor.get_subnet_hyperparameters, netuid=self.config.netuid)
+        self.resync_metagraph_rate = 600  # in seconds
         bt.logging.info(
             f"Running validator for subnet: {self.config.netuid} on network: {self.config.subtensor.network}"
         )
@@ -40,21 +47,29 @@ class weight_setter:
             self.save_state()
         else:
             self.load_state()
-        self.node = SubstrateInterface(url=self.config.subtensor.chain_endpoint)
         self.current_block = self.subtensor.get_current_block()
-        self.blocks_since_last_update = (
-            self.current_block - self.node_query("SubtensorModule", "LastUpdate", [self.config.netuid])[self.my_uid]
+        self.blocks_since_last_update = self.subtensor.blocks_since_last_update(
+            netuid=self.config.netuid, uid=self.my_uid
         )
-        self.tempo = self.node_query("SubtensorModule", "Tempo", [self.config.netuid])
         if self.config.wandb_on:
             setup_wandb(self)
         self.stop_event = asyncio.Event()
         bt.logging.info("Setup complete, starting loop")
         self.loop.create_task(
-            self.loop_handler(self.scheduled_prediction_request, sleep_time=self.config.print_cadence)
+            loop_handler(self, self.scheduled_prediction_request, sleep_time=self.config.print_cadence)
         )
-        self.loop.create_task(self.loop_handler(self.resync_metagraph, sleep_time=self.resync_metagraph_rate))
-        self.loop.create_task(self.loop_handler(self.set_weights, sleep_time=self.set_weights_rate))
+        self.loop.create_task(loop_handler(self, self.resync_metagraph, sleep_time=self.resync_metagraph_rate))
+        self.loop.create_task(loop_handler(self, self.set_weights, sleep_time=self.hyperparameters.weights_rate_limit))
+        try:
+            self.loop.run_forever()
+        except websocket._exceptions.WebSocketConnectionClosedException:
+            # TODO: Exceptions are not being caught in this loop
+            bt.logging.info("Caught websocket connection closed exception")
+            self.__reset_instance__()
+        except Exception as e:
+            bt.logging.error(f"Error on loop: {e}")
+        finally:
+            self.__exit__(None, None, None)
 
     def __exit__(self, exc_type, exc_value, traceback):
         self.save_state()
@@ -62,26 +77,15 @@ class weight_setter:
             pending = asyncio.all_tasks(self.loop)
             for task in pending:
                 task.cancel()
-            asyncio.gather(*pending)
         except Exception as e:
             bt.logging.error(f"Error on __exit__ function: {e}")
-        self.loop.stop()
-
-    async def loop_handler(self, func, sleep_time=120):
-        try:
-            while not self.stop_event.is_set():
-                await func()
-                await asyncio.sleep(sleep_time)
-        except asyncio.exceptions.CancelledError:
-            raise
-        except KeyboardInterrupt:
-            raise
-        except Exception:
-            raise
         finally:
-            async with self.lock:
-                self.stop_event.set()
-                self.__exit__(None, None, None)
+            asyncio.gather(*pending, return_exceptions=True)
+            self.loop.stop()
+
+    def __reset_instance__(self):
+        self.__exit__(None, None, None)
+        self.__init__(self.config, self.loop)
 
     async def get_available_uids(self):
         miner_uids = []
@@ -91,28 +95,25 @@ class weight_setter:
                 miner_uids.append(uid)
         return miner_uids
 
-    async def resync_metagraph(self, force=False):
+    async def resync_metagraph(self):
         """Resyncs the metagraph and updates the hotkeys and moving averages based on the new metagraph."""
-        async with self.lock:
-            self.blocks_since_sync = self.current_block - self.last_sync
-            if self.blocks_since_sync >= self.resync_metagraph_rate or force:
-                bt.logging.info("Syncing Metagraph...")
-                self.metagraph.sync(subtensor=self.subtensor)
-                bt.logging.info("Metagraph updated, re-syncing hotkeys, dendrite pool and moving averages")
-                # Zero out all hotkeys that have been replaced.
-                self.available_uids = asyncio.run(self.get_available_uids())
-                for uid, hotkey in enumerate(self.metagraph.hotkeys):
-                    if (uid not in self.MinerHistory and uid in self.available_uids) or self.hotkeys[uid] != hotkey:
-                        bt.logging.info(f"Replacing hotkey on {uid} with {self.metagraph.hotkeys[uid]}")
-                        self.hotkeys[uid] = hotkey
-                        self.scores[uid] = 0  # hotkey has been replaced
-                        self.MinerHistory[uid] = MinerHistory(uid, timezone=self.timezone)
-                        self.moving_average_scores[uid] = 0
-                self.last_sync = self.subtensor.get_current_block()
-                self.save_state()
+        self.subtensor = bt.subtensor(config=self.config, network=self.config.subtensor.chain_endpoint)
+        bt.logging.info("Syncing Metagraph...")
+        self.metagraph.sync(subtensor=self.subtensor)
+        bt.logging.info("Metagraph updated, re-syncing hotkeys, dendrite pool and moving averages")
+        # Zero out all hotkeys that have been replaced.
+        self.available_uids = asyncio.run(self.get_available_uids())
+        for uid, hotkey in enumerate(self.metagraph.hotkeys):
+            if (uid not in self.MinerHistory and uid in self.available_uids) or self.hotkeys[uid] != hotkey:
+                bt.logging.info(f"Replacing hotkey on {uid} with {self.metagraph.hotkeys[uid]}")
+                self.hotkeys[uid] = hotkey
+                self.scores[uid] = 0  # hotkey has been replaced
+                self.MinerHistory[uid] = MinerHistory(uid, timezone=self.timezone)
+                self.moving_average_scores[uid] = 0
+        self.save_state()
 
     def query_miners(self):
-        timestamp = get_now().isoformat()
+        timestamp = datetime_to_iso8601(get_now())
         synapse = Challenge(timestamp=timestamp)
         responses = self.dendrite.query(
             # Send the query to selected miner axons in the network.
@@ -122,20 +123,17 @@ class weight_setter:
         )
         return responses, timestamp
 
-    def node_query(self, module, method, params):
-        try:
-            result = self.node.query(module, method, params).value
-        except Exception:
-            # reinitilize node
-            self.node = SubstrateInterface(url=self.subtensor.chain_endpoint)
-            result = self.node.query(module, method, params).value
-        return result
-
     async def set_weights(self):
-        if self.blocks_since_last_update >= self.set_weights_rate:
-            async with self.lock:
-                uids = array(self.available_uids)
-                weights = [self.moving_average_scores[uid] for uid in self.available_uids]
+        try:
+            self.blocks_since_last_update = func_with_retry(
+                self.subtensor.blocks_since_last_update, netuid=self.config.netuid, uid=self.my_uid
+            )
+            self.current_block = func_with_retry(self.subtensor.get_current_block)
+        except Exception as e:
+            bt.logging.error(f"Failed to get current block with error {e}, skipping block update")
+        if self.blocks_since_last_update >= self.hyperparameters.weights_rate_limit:
+            uids = array(self.available_uids)
+            weights = [self.moving_average_scores[uid] for uid in self.available_uids]
             for i, j in zip(weights, self.available_uids):
                 bt.logging.debug(f"UID: {j}  |  Weight: {i}")
             if sum(weights) == 0:
@@ -152,25 +150,20 @@ class weight_setter:
                 uids=uint_uids,
                 weights=uint_weights,
                 wait_for_inclusion=True,
-                wait_for_finalization=True,
                 version_key=__spec_version__,
             )
             if result:
                 bt.logging.success("✅ Set Weights on chain successfully!")
+                self.blocks_since_last_update = 0
             else:
                 bt.logging.debug(
                     "Failed to set weights this iteration with message:",
                     msg,
                 )
-        async with self.lock:
-            self.current_block = self.subtensor.get_current_block()
-            self.blocks_since_last_update = (
-                self.current_block - self.node_query("SubtensorModule", "LastUpdate", [self.config.netuid])[self.my_uid]
-            )
 
     async def scheduled_prediction_request(self):
         if not hasattr(self, "timestamp"):
-            self.timestamp = get_before(minutes=self.prediction_interval).isoformat()
+            self.timestamp = datetime_to_iso8601(get_before(minutes=self.prediction_interval))
         query_lag = elapsed_seconds(get_now(), iso8601_to_datetime(self.timestamp))
         if len(self.available_uids) == 0:
             bt.logging.info("No miners available. Sleeping for 10 minutes...")
@@ -184,12 +177,11 @@ class weight_setter:
                 except Exception as e:
                     bt.logging.error(f"Failed to calculate rewards with error: {e}")
                 # Adjust the scores based on responses from miners and update moving average.
-                async with self.lock:
-                    for i, value in zip(self.available_uids, rewards):
-                        self.moving_average_scores[i] = (1 - self.config.alpha) * self.moving_average_scores[
-                            i
-                        ] + self.config.alpha * value
-                        self.scores = list(self.moving_average_scores.values())
+                for i, value in zip(self.available_uids, rewards):
+                    self.moving_average_scores[i] = (1 - self.config.alpha) * self.moving_average_scores[
+                        i
+                    ] + self.config.alpha * value
+                    self.scores = list(self.moving_average_scores.values())
                 if self.config.wandb_on:
                     log_wandb(responses, rewards, self.available_uids)
             else:
