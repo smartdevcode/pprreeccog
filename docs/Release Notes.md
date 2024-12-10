@@ -1,8 +1,9 @@
 Release Notes
 =============
 
-1.0.0
+0.1.0
 -----
-Release on
-- ...
-- ...
+Released on December 10th 2024
+- Successful deployment on testnest
+- Implemented naive base miner
+- Leveraged poetry dependency management
