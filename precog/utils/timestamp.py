@@ -66,14 +66,14 @@ def datetime_to_iso8601(timestamp: datetime) -> str:
     """
     Convert datetime to iso 8601 string
     """
-    return timestamp.isoformat()
+    return timestamp.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
 
 def iso8601_to_datetime(timestamp: str) -> datetime:
     """
     Convert iso 8601 string to datetime
     """
-    return datetime.fromisoformat(timestamp).astimezone(get_timezone())
+    return datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=get_timezone())
 
 
 def posix_to_datetime(timestamp: float) -> datetime:

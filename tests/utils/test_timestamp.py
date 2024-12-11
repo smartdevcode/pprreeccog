@@ -25,7 +25,7 @@ class TestTimestamp(unittest.TestCase):
 
         self.DATETIME_CONSTANT = datetime(2024, 12, 11, 18, 46, 43, 112378, tzinfo=get_timezone())
         self.POSIX_CONSTANT = 1733942803.112378
-        self.ISO8601_CONSTANT = "2024-12-11T18:46:43.112378+00:00"
+        self.ISO8601_CONSTANT = "2024-12-11T18:46:43.112378Z"
 
     # runs once prior to every single test
     def setUp(self):
