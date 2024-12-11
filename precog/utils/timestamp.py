@@ -83,13 +83,6 @@ def posix_to_datetime(timestamp: float) -> datetime:
     return datetime.fromtimestamp(timestamp, tz=get_timezone())
 
 
-def datetime_to_CM_timestamp(timestamp: datetime) -> str:
-    """
-    Convert iso 8601 string to coinmetrics timestamp
-    """
-    return timestamp.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-
-
 ###############################
 #          FUNCTIONS          #
 ###############################
