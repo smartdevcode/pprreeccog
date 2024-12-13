@@ -1,20 +1,11 @@
 import unittest
 from datetime import datetime
 
-from hypothesis import given
+from hypothesis import given, settings
 from hypothesis import strategies as st
 from pytz import timezone
 
-from precog.utils.timestamp import (
-    datetime_to_iso8601,
-    datetime_to_posix,
-    get_midnight,
-    get_now,
-    get_posix,
-    get_timezone,
-    iso8601_to_datetime,
-    posix_to_datetime,
-)
+from precog.utils.timestamp import get_midnight, get_now, get_posix, get_timezone, to_datetime, to_posix, to_str
 
 
 class TestTimestamp(unittest.TestCase):
@@ -25,7 +16,7 @@ class TestTimestamp(unittest.TestCase):
 
         self.DATETIME_CONSTANT = datetime(2024, 12, 11, 18, 46, 43, 112378, tzinfo=get_timezone())
         self.POSIX_CONSTANT = 1733942803.112378
-        self.ISO8601_CONSTANT = "2024-12-11T18:46:43.112378Z"
+        self.STR_CONSTANT = "2024-12-11T18:46:43.112378Z"
 
     # runs once prior to every single test
     def setUp(self):
@@ -104,58 +95,157 @@ class TestTimestamp(unittest.TestCase):
         self.assertEqual(midnight2.minute, 0)
         self.assertEqual(midnight2.hour, 0)
 
-    def test_datetime_iso_roundtrip(self):
+    def test_to_datetime(self):
+        datetime1 = to_datetime(self.DATETIME_CONSTANT)
+        datetime2 = to_datetime(self.POSIX_CONSTANT)
+        datetime3 = to_datetime(self.STR_CONSTANT)
+
+        # Check that all timestamps are datetime instances
+        self.assertIsInstance(datetime1, datetime)
+        self.assertIsInstance(datetime2, datetime)
+        self.assertIsInstance(datetime3, datetime)
+
+        # Check that all timestamps are equivalent
+        self.assertEqual(datetime1, datetime2)
+        self.assertEqual(datetime1, datetime3)
+        self.assertEqual(datetime2, datetime3)
+
+        # Check that this is UTC timezone aware
+        self.assertEqual(datetime1.tzinfo, get_timezone())
+        self.assertEqual(datetime2.tzinfo, get_timezone())
+        self.assertEqual(datetime3.tzinfo, get_timezone())
+
+        # Check that we throw type error on bool
+        with self.assertRaises(TypeError):
+            to_datetime(True)
+
+        # Check that we throw type error on int
+        with self.assertRaises(TypeError):
+            to_datetime(123)
+
+    def test_to_str(self):
+        datetime1 = to_str(self.DATETIME_CONSTANT)
+        datetime2 = to_str(self.POSIX_CONSTANT)
+        datetime3 = to_str(self.STR_CONSTANT)
+
+        # Check that all timestamps are str instances
+        self.assertIsInstance(datetime1, str)
+        self.assertIsInstance(datetime2, str)
+        self.assertIsInstance(datetime3, str)
+
+        # Check that all timestamps are equivalent
+        self.assertEqual(datetime1, datetime2)
+        self.assertEqual(datetime1, datetime3)
+        self.assertEqual(datetime2, datetime3)
+
+        # Check that we throw type error on bool
+        with self.assertRaises(TypeError):
+            to_str(True)
+
+        # Check that we throw type error on int
+        with self.assertRaises(TypeError):
+            to_str(123)
+
+    def test_to_posix(self):
+        datetime1 = to_posix(self.DATETIME_CONSTANT)
+        datetime2 = to_posix(self.POSIX_CONSTANT)
+        datetime3 = to_posix(self.STR_CONSTANT)
+
+        # Check that all timestamps are float instances
+        self.assertIsInstance(datetime1, float)
+        self.assertIsInstance(datetime2, float)
+        self.assertIsInstance(datetime3, float)
+
+        # Check that all timestamps are equivalent
+        self.assertEqual(datetime1, datetime2)
+        self.assertEqual(datetime1, datetime3)
+        self.assertEqual(datetime2, datetime3)
+
+        # Check that we throw type error on bool
+        with self.assertRaises(TypeError):
+            to_str(True)
+
+        # Check that we throw type error on int
+        with self.assertRaises(TypeError):
+            to_str(123)
+
+    def test_datetime_roundtrip(self):
         # datetime -> str -> datetime
-        new_str = datetime_to_iso8601(self.DATETIME_CONSTANT)
-        new_datetime = iso8601_to_datetime(new_str)
+        new_str = to_str(self.DATETIME_CONSTANT)
+        new_datetime = to_datetime(new_str)
 
         self.assertEqual(self.DATETIME_CONSTANT, new_datetime)
-        self.assertEqual(self.ISO8601_CONSTANT, new_str)
+        self.assertEqual(self.STR_CONSTANT, new_str)
         self.assertEqual(new_datetime.tzinfo, get_timezone())
 
+        # datetime -> posix -> datetime
+        new_posix = to_posix(self.DATETIME_CONSTANT)
+        new_datetime = to_datetime(new_posix)
+
+        self.assertEqual(self.DATETIME_CONSTANT, new_datetime)
+        self.assertEqual(self.POSIX_CONSTANT, new_posix)
+        self.assertEqual(new_datetime.tzinfo, get_timezone())
+
+    def test_str_roundtrip(self):
         # str -> datetime -> str
-        new_datetime = iso8601_to_datetime(self.ISO8601_CONSTANT)
-        new_str = datetime_to_iso8601(new_datetime)
+        new_datetime = to_datetime(self.STR_CONSTANT)
+        new_str = to_str(new_datetime)
 
         self.assertEqual(self.DATETIME_CONSTANT, new_datetime)
-        self.assertEqual(self.ISO8601_CONSTANT, new_str)
+        self.assertEqual(self.STR_CONSTANT, new_str)
         self.assertEqual(new_datetime.tzinfo, get_timezone())
 
-    @given(st.datetimes(timezones=st.just(get_timezone())))
-    def test_hypothesis_datetime_iso_roundtrip(self, new_datetime):
-        # datetime -> str -> datetime
-        new_str = datetime_to_iso8601(new_datetime)
-        new_datetime2 = iso8601_to_datetime(new_str)
+        # str -> posix -> str
+        new_posix = to_posix(self.STR_CONSTANT)
+        new_str = to_str(new_posix)
+
+        self.assertEqual(self.STR_CONSTANT, new_str)
+        self.assertEqual(self.POSIX_CONSTANT, new_posix)
+
+    def test_posix_roundtrip(self):
+        # posix -> datetime -> posix
+        new_datetime = to_datetime(self.POSIX_CONSTANT)
+        new_posix = to_posix(new_datetime)
+
+        self.assertEqual(self.DATETIME_CONSTANT, new_datetime)
+        self.assertEqual(self.POSIX_CONSTANT, new_posix)
+        self.assertEqual(new_datetime.tzinfo, get_timezone())
+
+        # posix -> str -> posix
+        new_str = to_str(self.POSIX_CONSTANT)
+        new_posix = to_posix(new_str)
+
+        self.assertEqual(self.STR_CONSTANT, new_str)
+        self.assertEqual(self.POSIX_CONSTANT, new_posix)
+
+    @settings(max_examples=1000)
+    @given(st.datetimes(timezones=st.just(get_timezone()), min_value=datetime(year=1970, month=1, day=1)))
+    def test_hypothesis_datetime_str_roundtrip(self, new_datetime):
+        # datetime -> str -> datetime -> str
+        new_str = to_str(new_datetime)
+        new_datetime2 = to_datetime(new_str)
+        new_str2 = to_str(new_datetime2)
 
         self.assertEqual(new_datetime, new_datetime2)
         self.assertEqual(new_datetime2.tzinfo, get_timezone())
+        self.assertEqual(new_str, new_str2)
 
-    def test_datetime_posix_roundtrip(self):
-        # datetime -> float -> datetime
-        new_float = datetime_to_posix(self.DATETIME_CONSTANT)
-        new_datetime = posix_to_datetime(new_float)
-
-        self.assertEqual(self.DATETIME_CONSTANT, new_datetime)
-        self.assertEqual(self.POSIX_CONSTANT, new_float)
-        self.assertEqual(new_datetime.tzinfo, get_timezone())
-
-        # float -> datetime -> float
-        new_datetime = posix_to_datetime(self.POSIX_CONSTANT)
-        new_float = datetime_to_posix(new_datetime)
-
-        self.assertEqual(self.DATETIME_CONSTANT, new_datetime)
-        self.assertEqual(self.POSIX_CONSTANT, new_float)
-        self.assertEqual(new_datetime.tzinfo, get_timezone())
-
-    @given(st.datetimes(timezones=st.just(get_timezone())).map(lambda dt: dt.replace(microsecond=0)))
+    @settings(max_examples=1000)
+    @given(
+        st.datetimes(timezones=st.just(get_timezone()), min_value=datetime(year=1970, month=1, day=1)).map(
+            lambda dt: dt.replace(microsecond=0)
+        )
+    )
     def test_hypothesis_datetime_posix_roundtrip(self, new_datetime):
         # hypothesis exposes niche floating point precision errors
         # zero out microseconds to solve this
         # Floating point precision resulting in a mismatch of 1 microsecond is negligible
 
-        # datetime -> float -> datetime
-        new_float = float(datetime_to_posix(new_datetime))
-        new_datetime2 = posix_to_datetime(new_float)
+        # datetime -> float -> datetime -> float
+        new_float = to_posix(new_datetime)
+        new_datetime2 = to_datetime(new_float)
+        new_float2 = to_posix(new_datetime2)
 
         self.assertEqual(new_datetime, new_datetime2)
         self.assertEqual(new_datetime2.tzinfo, get_timezone())
+        self.assertEqual(new_float, new_float2)

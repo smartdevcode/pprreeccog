@@ -80,7 +80,7 @@ def to_posix(timestamp: Union[datetime, str, float]) -> float:
     # Convert to posix time float
     posix_timestamp = utc_datetime.timestamp()
 
-    return posix_timestamp
+    return float(posix_timestamp)
 
 
 def to_str(timestamp: Union[datetime, str, float]) -> str:
@@ -94,7 +94,7 @@ def to_str(timestamp: Union[datetime, str, float]) -> str:
     # Convert to iso8601 string
     str_datetime = utc_datetime.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
-    return str_datetime
+    return str(str_datetime)
 
 
 def to_datetime(timestamp: Union[str, float]) -> datetime:
