@@ -20,14 +20,13 @@ def get_point_estimate(timestamp: str) -> float:
     # Create data gathering instance
     cm = CMData()
 
-    # Set the time range to be as small as possible for query speed
-    # Set the start time as 2 seconds prior to the provided time
-    # Ensure both timestamps are correctly typed and set to UTC
-    start_time = get_before(timestamp=timestamp, days=0, minutes=0, seconds=2)
-    end_time = to_datetime(timestamp)
+    # Ensure timestamp is correctly typed and set to UTC
+    provided_timestamp = to_datetime(timestamp)
 
     # Query CM API for a pandas dataframe with only one record
-    price_data: pd.DataFrame = cm.get_CM_ReferenceRate(assets="BTC", start=to_str(start_time), end=to_str(end_time))
+    price_data: pd.DataFrame = cm.get_CM_ReferenceRate(
+        assets="BTC", start=None, end=to_str(provided_timestamp), frequency="1s", limit_per_asset=1, paging_from="end"
+    )
 
     # Get current price closest to the provided timestamp
     btc_price: float = float(price_data["ReferenceRateUSD"].iloc[-1])
