@@ -58,7 +58,7 @@ def check_config(cls, config: "bt.Config"):
         os.makedirs(config.neuron.full_path, exist_ok=True)
 
 
-def add_args(cls, parser):
+def add_args(parser):
     """
     Adds relevant arguments to the parser for operation.
     """
@@ -128,7 +128,7 @@ def add_args(cls, parser):
     parser.add_argument("--autoupdate", action="store_true", dest="autoupdate")
 
 
-def add_miner_args(cls, parser):
+def add_miner_args(parser):
     """Add miner specific arguments to the parser."""
 
     parser.add_argument(
@@ -169,7 +169,7 @@ def add_miner_args(cls, parser):
     parser.add_argument("--forward_function", type=str, default="forward", help="name of the forward function to use")
 
 
-def add_validator_args(cls, parser):
+def add_validator_args(parser):
     """Add validator specific arguments to the parser."""
 
     parser.add_argument(
@@ -263,7 +263,7 @@ def to_string(parser):
     return string
 
 
-def config(cls):
+def config():
     """
     Returns the configuration object specific to this miner or validator after adding relevant arguments.
     """
@@ -272,5 +272,5 @@ def config(cls):
     bt.subtensor.add_args(parser)
     bt.logging.add_args(parser)
     bt.axon.add_args(parser)
-    cls.add_args(parser)
+    add_args(parser)
     return bt.config(parser)

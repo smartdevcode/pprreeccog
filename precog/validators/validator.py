@@ -4,7 +4,6 @@ from pathlib import Path
 
 import bittensor as bt
 
-from precog.utils.config import add_args, add_validator_args
 from precog.validators.weight_setter import weight_setter
 
 
@@ -30,12 +29,6 @@ class Validator:
     @classmethod
     def get_config(cls):
         parser = argparse.ArgumentParser()
-        bt.wallet.add_args(parser)
-        bt.subtensor.add_args(parser)
-        bt.logging.add_args(parser)
-        bt.axon.add_args(parser)
-        add_args(cls, parser)
-        add_validator_args(cls, parser)
         return bt.config(parser)
 
 

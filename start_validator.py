@@ -1,4 +1,3 @@
-import argparse
 import subprocess
 import time
 
@@ -35,7 +34,7 @@ def update_and_restart(args):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
+    parser = config()
     args = parser.parse_args()
     try:
         update_and_restart(args)
