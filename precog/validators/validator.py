@@ -1,16 +1,13 @@
-import argparse
 import asyncio
 from pathlib import Path
 
-import bittensor as bt
-
+from precog.utils.config import config
 from precog.validators.weight_setter import weight_setter
 
 
 class Validator:
     def __init__(self):
-        self.config = self.get_config()
-        self.config.neuron.type = "Validator"
+        self.config = config(neuron_type="validator")
         print(self.config)
         full_path = Path(
             f"{self.config.logging.logging_dir}/{self.config.wallet.name}/{self.config.wallet.hotkey}/netuid{self.config.netuid}/validator"
@@ -25,11 +22,6 @@ class Validator:
     async def reset_instance(self):
         self.__init__()
         asyncio.run(self.main())
-
-    @classmethod
-    def get_config(cls):
-        parser = argparse.ArgumentParser()
-        return bt.config(parser)
 
 
 # Run the validator.

@@ -11,7 +11,7 @@ current_version = precog.__version__
 
 def update_and_restart(args):
     global current_version
-    start_command = ["pm2", "start", "--name", f"{args.getattr('neuron.name')}"]
+    start_command = ["pm2", "start", "--name", f"{config.neuron.name}"]
     arguments = "python3 -m precog.validators.validator" + to_string(args)
 
     start_command.append(arguments)
@@ -34,9 +34,8 @@ def update_and_restart(args):
 
 
 if __name__ == "__main__":
-    parser = config()
-    args = parser.parse_args()
+    config = config(neuron_type="validator")
     try:
-        update_and_restart(args)
+        update_and_restart(config)
     except Exception as e:
         print(e)

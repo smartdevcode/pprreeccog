@@ -263,7 +263,7 @@ def to_string(parser):
     return string
 
 
-def config():
+def config(neuron_type: str = "validator"):
     """
     Returns the configuration object specific to this miner or validator after adding relevant arguments.
     """
@@ -273,4 +273,10 @@ def config():
     bt.logging.add_args(parser)
     bt.axon.add_args(parser)
     add_args(parser)
+    if neuron_type == "validator":
+        add_validator_args(parser)
+        parser.add_argument("--neuron.type", type=str, default="Validator")
+    elif neuron_type == "miner":
+        add_miner_args(parser)
+        parser.add_argument("--neuron.type", type=str, default="Miner")
     return bt.config(parser)
