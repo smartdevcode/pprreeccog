@@ -19,6 +19,7 @@
 import argparse
 import os
 import subprocess
+from typing import Optional
 
 import bittensor as bt
 
@@ -275,11 +276,10 @@ def to_string(bt_config: bt.Config):
     return string.strip()
 
 
-def config(neuron_type: str = "validator"):
+def config(parser: Optional[argparse.ArgumentParser] = argparse.ArgumentParser(), neuron_type: str = "validator"):
     """
     Returns the configuration object specific to this miner or validator after adding relevant arguments.
     """
-    parser = argparse.ArgumentParser()
     bt.wallet.add_args(parser)
     bt.subtensor.add_args(parser)
     bt.logging.add_args(parser)

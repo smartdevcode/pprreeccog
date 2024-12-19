@@ -1,3 +1,4 @@
+import argparse
 import asyncio
 from pathlib import Path
 
@@ -7,7 +8,7 @@ from precog.validators.weight_setter import weight_setter
 
 class Validator:
     def __init__(self):
-        self.config = config(neuron_type="validator")
+        self.config = config(parser=argparse.ArgumentParser(), neuron_type="validator")
         print(self.config)
         full_path = Path(
             f"{self.config.logging.logging_dir}/{self.config.wallet.name}/{self.config.wallet.hotkey}/netuid{self.config.netuid}/validator"
