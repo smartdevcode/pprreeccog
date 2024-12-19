@@ -252,9 +252,9 @@ def add_validator_args(parser):
     parser.add_argument("--reset_state", action="store_true", dest="reset_state", help="Overwrites the state file")
 
 
-def to_string(config: bt.Config):
+def to_string(bt_config: bt.Config):
     string = ""
-    for key, value in config.items():
+    for key, value in bt_config.items():
         ignore = key == "__is_set"
         if ignore:
             continue
