@@ -254,18 +254,24 @@ def add_validator_args(parser):
 
 def to_string(config: bt.Config):
     string = ""
-    for i, j in config.items():
-        if isinstance(j, bt.core.config.Config):
-            for k, l in j.items():
-                ignore = k == "__is_set"
+    for key, value in config.items():
+        ignore = key == "__is_set"
+        if ignore:
+            continue
+        if isinstance(value, bool):
+            string += f"--{key} "
+        elif isinstance(value, bt.core.config.Config):
+            for key_2, value_2 in value.items():
+                ignore = key_2 == "__is_set"
                 if ignore:
                     continue
-                string += f"--{i}.{k} {l} "
+                elif isinstance(value_2, bool):
+                    if value_2:
+                        string += f"--{key}.{key_2} "
+                else:
+                    string += f"--{key}.{key_2} {value_2} "
         else:
-            ignore = i == "__is_set"
-            if ignore:
-                continue
-            string += f"--{i} {j} "
+            string += f"--{key} {value} "
     return string.strip()
 
 
@@ -286,3 +292,26 @@ def config(neuron_type: str = "validator"):
         add_miner_args(parser)
         parser.add_argument("--neuron.type", type=str, default="Miner")
     return bt.config(parser)
+
+
+string = ""
+for key, value in config.items():
+    ignore = key == "__is_set"
+    if ignore:
+        continue
+    if isinstance(value, bool):
+        string += f"--{key} "
+    elif isinstance(value, bt.core.config.Config):
+        for key_2, value_2 in value.items():
+            ignore = key_2 == "__is_set"
+            if ignore:
+                continue
+            elif isinstance(value_2, bool):
+                if value_2:
+                    string += f"--{key}.{key_2} "
+            else:
+                string += f"--{key}.{key_2} {value_2} "
+    else:
+        string += f"--{key} {value} "
+
+print(string)
