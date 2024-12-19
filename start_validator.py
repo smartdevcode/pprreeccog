@@ -1,18 +1,19 @@
+import argparse
 import subprocess
 import time
 
 import precog
-from precog.utils.config import config
-from precog.utils.general import get_version, parse_arguments
+from precog.utils.config import config, to_string
+from precog.utils.general import get_version
 
 webhook_url = ""
 current_version = precog.__version__
 
 
-def update_and_restart(config):
+def update_and_restart(args):
     global current_version
-    start_command = ["pm2", "start", "--name", f"{config.neuron.name}"]
-    arguments = "python3 -m precog.validators.validator" + config.to_str()
+    start_command = ["pm2", "start", "--name", f"{args.getattr('neuron.name')}"]
+    arguments = "python3 -m precog.validators.validator" + to_string(args)
 
     start_command.append(arguments)
     subprocess.run(start_command)
@@ -23,7 +24,7 @@ def update_and_restart(config):
             print(f"Latest version: {latest_version}")
             if current_version != latest_version and latest_version is not None:
                 print("Updating to the latest version...")
-                subprocess.run(["pm2", "delete", config.neuron.name])
+                subprocess.run(["pm2", "delete", args.getattr("neuron.name")])
                 subprocess.run(["git", "reset", "--hard"])
                 subprocess.run(["git", "pull"])
                 subprocess.run(["pip", "install", "-e", "."])
@@ -34,9 +35,9 @@ def update_and_restart(config):
 
 
 if __name__ == "__main__":
-    args = parse_arguments()
-    config = config()
+    parser = argparse.ArgumentParser()
+    args = parser.parse_args()
     try:
-        update_and_restart(config)
+        update_and_restart(args)
     except Exception as e:
         print(e)

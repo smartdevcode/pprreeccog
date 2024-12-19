@@ -252,6 +252,17 @@ def add_validator_args(cls, parser):
     parser.add_argument("--reset_state", action="store_true", dest="reset_state", help="Overwrites the state file")
 
 
+def to_string(parser):
+    if isinstance(parser, argparse.ArgumentParser):
+        args = parser.parse_args()
+    elif isinstance(parser, argparse.Namespace):
+        args = parser
+    string = ""
+    for i, j in vars(args).items():
+        string += f"--{i} {j} "
+    return string
+
+
 def config(cls):
     """
     Returns the configuration object specific to this miner or validator after adding relevant arguments.
@@ -263,7 +274,3 @@ def config(cls):
     bt.axon.add_args(parser)
     cls.add_args(parser)
     return bt.config(parser)
-
-
-# parser.add_argument("--reset_state", action="store_true", dest="reset_state", help="Overwrites the state file")
-# parser.add_argument("--timeout", type=int, default=16, help="allowable nonce delay time (seconds)")
