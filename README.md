@@ -30,11 +30,16 @@
 ---
 ## Introduction
 
-CoinMetrics Blurb
+The Precog Subnet will serve as an arena to identify the analysts with the best strategies and information to anticipate Bitcoin price movements, and recruit them to share their insight with the broader community.  By leveraging Bittensor’s subnet structure multiple perspectives can compete with the collective goal of filtering out noise in price signals.  The open ecosystem creates a mechanism for people with unique knowledge to benefit themselves in exchange for sharing their specialties with the public
 
 ---
 ## Design Decisions
-Another Blurb
+The initial focus is on Bitcoin as it is the most well-established and arguably most decentralized crypto currency.  Bitcoin has an abundance of high-resolution data, while still retaining enough volatility to make price prediction a valuable challenge.
+
+We decided to focus on high-frequency predictions (every 5 minutes) with short resolution times (every hour) because we believe this leverages the unique capabilities of Bittensor to do something that traditional derivatives markets cannot do.  While options and futures allow markets to express sentiments around asset price, they are unable to do so in a continuously and with such a short settlement time.
+
+The incentive mechanism was specifically designed to reward precise statements of the future price level, as well as the most likely band the price will trade in. Compared to mechanisms with less precise “long” or “short” predictions, and pre-determined strike price intervals, we believe the metrics we query are closer to what traders and analysts truly want: the most likely price in the future with frequent updates.
+
 
 ---
 ## Installation
@@ -109,6 +114,11 @@ Optional but recommended.
 
 ---
 ## Roadmap
+
+Our goal is to continuously improve the subnet and tune it to the goals and interests that will engage the community.  We have considered additions in the form of additional asset coverage, such as extending price analysis to TAO tokens.  Extensions can also mean incentive mechanisms to calculate new types of metrics such as anticipating volatility, transaction volumes, or the cost of different types of transfers.  Our greatest strength is our deep and professional data library, used by many of the largest financial institutions in crypto.  We expect these resources will allow the subnet scope to adapt quickly when conditions are right.
+
+We hope to, on one hand, leverage our existing products and coverage to make generating new insights as frictionless as possible for Miners.  While on the other hand, we also hope to integrate new data streams into our catalog that only the Bittensor ecosystem can generate.  Our aim is for these novel outputs to ultimately bring new participants to Bittensor from the broader crypto community, as we serve metrics and analysis that can't be obtained anywhere else.
+
 
 ## Compute Requirements
 
