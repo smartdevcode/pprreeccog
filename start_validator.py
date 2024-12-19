@@ -2,7 +2,7 @@ import subprocess
 import time
 
 import precog
-from precog.utils.classes import Config
+from precog.utils.config import config
 from precog.utils.general import get_version, parse_arguments
 
 webhook_url = ""
@@ -35,7 +35,7 @@ def update_and_restart(config):
 
 if __name__ == "__main__":
     args = parse_arguments()
-    config = Config(args)
+    config = config()
     try:
         update_and_restart(config)
     except Exception as e:
