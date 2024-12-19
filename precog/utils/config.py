@@ -252,15 +252,21 @@ def add_validator_args(parser):
     parser.add_argument("--reset_state", action="store_true", dest="reset_state", help="Overwrites the state file")
 
 
-def to_string(parser):
-    if isinstance(parser, argparse.ArgumentParser):
-        args = parser.parse_args()
-    elif isinstance(parser, argparse.Namespace):
-        args = parser
+def to_string(config: bt.Config):
     string = ""
-    for i, j in vars(args).items():
-        string += f"--{i} {j} "
-    return string
+    for i, j in config.items():
+        if isinstance(j, bt.core.config.Config):
+            for k, l in j.items():
+                ignore = k == "__is_set"
+                if ignore:
+                    continue
+                string += f"--{i}.{k} {l} "
+        else:
+            ignore = i == "__is_set"
+            if ignore:
+                continue
+            string += f"--{i} {j} "
+    return string.strip()
 
 
 def config(neuron_type: str = "validator"):
