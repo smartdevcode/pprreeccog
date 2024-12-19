@@ -292,26 +292,3 @@ def config(neuron_type: str = "validator"):
         add_miner_args(parser)
         parser.add_argument("--neuron.type", type=str, default="Miner")
     return bt.config(parser)
-
-
-string = ""
-for key, value in config.items():
-    ignore = key == "__is_set"
-    if ignore:
-        continue
-    if isinstance(value, bool):
-        string += f"--{key} "
-    elif isinstance(value, bt.core.config.Config):
-        for key_2, value_2 in value.items():
-            ignore = key_2 == "__is_set"
-            if ignore:
-                continue
-            elif isinstance(value_2, bool):
-                if value_2:
-                    string += f"--{key}.{key_2} "
-            else:
-                string += f"--{key}.{key_2} {value_2} "
-    else:
-        string += f"--{key} {value} "
-
-print(string)
