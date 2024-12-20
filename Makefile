@@ -30,7 +30,7 @@ validator:
 		--wallet.name $(coldkey) \
 		--wallet.hotkey $(validator_hotkey) \
 		--subtensor.chain_endpoint $(network) \
-		--axon.port 30335 \
+		--axon.port 8091 \
 		--netuid $(netuid) \
 		--logging.level $(logging_level)
 
@@ -40,21 +40,21 @@ miner:
 		--wallet.name $(coldkey) \
 		--wallet.hotkey $(miner_hotkey) \
 		--subtensor.chain_endpoint $(network) \
-		--axon.port 30336 \
+		--axon.port 8092 \
 		--netuid $(netuid) \
 		--logging.level $(logging_level) \
 		--timeout 16 \
 		--vpermit_tao_limit 2 \
-		--forward_function forward
+		--forward_function base_miner
 
-miner2:
+custom_miner:
 	python start_miner.py \
-		--neuron.name miner2 \
+		--neuron.name custom_miner \
 		--wallet.name $(coldkey) \
 		--wallet.hotkey miner2 \
 		--subtensor.chain_endpoint $(network) \
-		--axon.port 30337 \
+		--axon.port 8093 \
 		--netuid $(netuid) \
 		--logging.level $(logging_level) \
 		--timeout 16 \
-		--forward_function forward_bad
+		--forward_function custom_function
