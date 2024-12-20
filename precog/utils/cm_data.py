@@ -166,4 +166,3 @@ class CMData:
 
         market_funding_rates = self.client.get_market_funding_rates(markets, page_size=page_size, **kwargs)
         return market_funding_rates.to_dataframe()
-

@@ -128,7 +128,3 @@ Optional but recommended.
 Our goal is to continuously improve the subnet and tune it to the goals and interests that will engage the community.  We have considered additions in the form of additional asset coverage, such as extending price analysis to TAO tokens.  Extensions can also mean incentive mechanisms to calculate new types of metrics such as anticipating volatility, transaction volumes, or the cost of different types of transfers.  Our greatest strength is our deep and professional data library, used by many of the largest financial institutions in crypto.  We expect these resources will allow the subnet scope to adapt quickly when conditions are right.
 
 We hope to, on one hand, leverage our existing products and coverage to make generating new insights as frictionless as possible for Miners.  While on the other hand, we also hope to integrate new data streams into our catalog that only the Bittensor ecosystem can generate.  Our aim is for these novel outputs to ultimately bring new participants to Bittensor from the broader crypto community, as we serve metrics and analysis that can't be obtained anywhere else.
-
-
-
-
