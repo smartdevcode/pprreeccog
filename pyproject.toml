@@ -2,7 +2,7 @@
 name = "precog"
 version = "0.1.0"
 description = "Bitcoin Price Prediction Subnet"
-authors = ["Coinmetrics", "Yuma"]
+authors = ["Coin Metrics", "Yuma Group"]
 readme = "README.md"
 
 
