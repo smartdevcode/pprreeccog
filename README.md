@@ -98,8 +98,8 @@ Base miner:
     ```
 
 Custom miner:
-1. Write a custom forward function stored in precog/miners/your_function.py
-    - The miner file searches the file (--forward_function filename) for a function called "forward"
+1. Write a custom forward function stored in precog/miners/your_file.py
+    - The miner file searches the file (--forward_function your_file) for a function called "forward"
     - This function should handle how the miner responds to requests from the validator
     - Within forward, synapse.predictions and synapse.interval should be set.
     - See [base_miner.py](https://github.com/coinmetrics/precog/blob/master/precog/miners/base_miner.py) for an example
