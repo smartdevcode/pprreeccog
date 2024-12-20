@@ -117,8 +117,14 @@ make validator
 ```
 
 
-## About the Rewards Mechanism
-Optional but recommended.
+## Incentive Mechanism
+Incentive mechanism whitepaper coming soon.
+
+Briefly, miners are rewarded based on two factors:
+1. A point estimate for the price of BTC in USD one hour from prediction time
+2. An interval estimate (the minimum and maximum price of BTC over the next hour based on a 1s frequency)
+
+For more information, feel free to investigate [reward.py](https://github.com/coinmetrics/precog/blob/master/precog/validators/reward.py) or [base_miner.py](https://github.com/coinmetrics/precog/blob/master/precog/miners/base_miner.py)
 
 
 
