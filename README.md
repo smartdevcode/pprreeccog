@@ -12,19 +12,6 @@
 
 </div>
 
----
-
-- [Introduction](#introduction)
-- [Design Decisions](#design-decisions)
-- [Installation](#installation)
-- [Subnet Participation](#subnet-participation)
-  - [Makefile](#makefile)
-  - [Running a Miner](#running-a-miner)
-  - [Running a Validator](#running-a-validator)
-- [About the Rewards Mechanism](#about-the-rewards-mechanism)
-- [Roadmap](#roadmap)
-- [Compute Requirements](#compute-requirements)
-- [License](#license)
 
 ---
 ## Introduction
@@ -84,7 +71,17 @@ poetry install
 ## Configuration
 
 ### Makefile
-Start by editing the Makefile with you wallet and network information.
+Start by editing the Makefile with you wallet and network information:
+```
+################################################################################
+#                               User Parameters                                #
+################################################################################
+coldkey = default
+validator_hotkey = validator
+miner_hotkey = miner
+netuid = $(testnet_netuid)
+network = $(testnet)
+```
 
 
 ---
@@ -98,14 +95,14 @@ Base miner:
     ```
 
 Custom miner:
-1. Write a custom forward function stored in precog/miners/your_file.py
-    - The miner file searches the file (--forward_function your_file) for a function called "forward"
+1. Write a custom forward function stored in `precog/miners/your_file.py`
+    - `miner.py` searches for a function called `forward` contained within your provided file `--forward_function your_file`
     - This function should handle how the miner responds to requests from the validator
-    - Within forward, synapse.predictions and synapse.interval should be set.
+    - Within the forward function, `synapse.predictions` and `synapse.interval` should be set.
     - See [base_miner.py](https://github.com/coinmetrics/precog/blob/master/precog/miners/base_miner.py) for an example
 2. Add a command to Makefile.
     - copy the miner command and rename it (e.g. miner_custom) in Makefile
-    - replace the --forward_function base_miner with --forward_function your_function
+    - replace the `--forward_function base_miner` with `--forward_function your_file`
 3. Run the Command:
     ```
     make miner_custom
