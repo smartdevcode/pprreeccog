@@ -8,7 +8,7 @@ def setup_wandb(self) -> None:
     if wandb_api_key is not None:
         wandb.init(
             project=f"sn{self.config.netuid}-validators",
-            entity="foundryservices",
+            entity="",
             config={
                 "hotkey": self.wallet.hotkey.ss58_address,
             },
