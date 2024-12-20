@@ -39,6 +39,13 @@ We decided to focus on high-frequency predictions (every 5 minutes) with short r
 
 The incentive mechanism was specifically designed to reward precise statements of the future price level, as well as the most likely band the price will trade in. Compared to mechanisms with less precise “long” or “short” predictions, and pre-determined strike price intervals, we believe the metrics we query are closer to what traders and analysts truly want: the most likely price in the future with frequent updates.
 
+---
+## Compute Requirements
+
+| Validator |   Miner   |
+|---------- |-----------|
+|  8gb RAM  |  8gb RAM  |
+|  2 vCPUs  |  2 vCPUs  |
 
 ---
 ## Installation
@@ -74,13 +81,16 @@ poetry install
 ```
 
 ---
-## Subnet Participation
+## Configuration
 
 ### Makefile
 Start by editing the Makefile with you wallet and network information.
 
-### Running a Miner
 
+---
+## Deployment
+
+### Running a Miner
 Base miner:
 1. Run the command:
     ```
@@ -89,7 +99,7 @@ Base miner:
 
 Custom miner:
 1. Write a custom forward function stored in precog/miners/your_function.py
-    - The miner file searches the file (--forward_function <filename>) for a function called "forward"
+    - The miner file searches the file (--forward_function filename) for a function called "forward"
     - This function should handle how the miner responds to requests from the validator
     - Within forward, synapse.predictions and synapse.interval should be set.
     - See [base_miner.py](https://github.com/coinmetrics/precog/blob/master/precog/miners/base_miner.py) for an example
@@ -111,6 +121,10 @@ make validator
 ## About the Rewards Mechanism
 Optional but recommended.
 
+
+
+
+
 ---
 ## Roadmap
 
@@ -119,11 +133,5 @@ Our goal is to continuously improve the subnet and tune it to the goals and inte
 We hope to, on one hand, leverage our existing products and coverage to make generating new insights as frictionless as possible for Miners.  While on the other hand, we also hope to integrate new data streams into our catalog that only the Bittensor ecosystem can generate.  Our aim is for these novel outputs to ultimately bring new participants to Bittensor from the broader crypto community, as we serve metrics and analysis that can't be obtained anywhere else.
 
 
-## Compute Requirements
 
-TODO: update these
-| Validator |   Miner   |
-|---------- |-----------|
-|  8gb RAM  |  8gb RAM  |
-|  2 vCPUs  |  2 vCPUs  |
 
