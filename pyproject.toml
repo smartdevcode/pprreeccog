@@ -1,8 +1,8 @@
 [tool.poetry]
 name = "precog"
-version = "0.1.0"
+version = "0.2.0"
 description = "Bitcoin Price Prediction Subnet"
-authors = ["Coinmetrics", "Yuma"]
+authors = ["Coin Metrics", "Yuma Group"]
 readme = "README.md"
 
 
@@ -38,6 +38,7 @@ isort = "^5.13.2"
 mypy = "^1.13.0"
 flake8 = "^7.1.1"
 pytest = "^8.3.3"
+hypothesis = "^6.122.3"
 
 
 [tool.black]
