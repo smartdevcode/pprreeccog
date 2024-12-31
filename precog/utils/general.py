@@ -49,6 +49,7 @@ def parse_arguments(parser: Optional[argparse.ArgumentParser] = None):
         help="What type of neuron this is",
     )
     parser.add_argument("--axon.port", type=int, default=8000)
+    parser.add_argument("--axon.ip", type=str, default="[::]")
     parser.add_argument("--logging.level", type=str, choices=["info", "debug", "trace"], default="info")
     parser.add_argument("--logging.logging_dir", type=str, default="~/.bittensor/validators")
     parser.add_argument(

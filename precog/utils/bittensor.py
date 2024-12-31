@@ -17,7 +17,7 @@ def setup_bittensor_objects(self):
     self.metagraph = self.subtensor.metagraph(self.config.netuid)
     self.wallet = bt.wallet(config=self.config)
     self.dendrite = bt.dendrite(wallet=self.wallet)
-    self.axon = bt.axon(wallet=self.wallet, config=self.config, port=self.config.axon.port)
+    self.axon = bt.axon(wallet=self.wallet, config=self.config, port=self.config.axon.port, ip=self.config.axon.ip)
     # Connect the validator to the network.
     if self.wallet.hotkey.ss58_address not in self.metagraph.hotkeys:
         bt.logging.error(
