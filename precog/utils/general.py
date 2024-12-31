@@ -50,8 +50,8 @@ def parse_arguments(parser: Optional[argparse.ArgumentParser] = None):
     )
     parser.add_argument("--axon.port", type=int, default=8000)
     parser.add_argument("--axon.ip", type=str, default="[::]")
-    parser.add_argument("--axon.external_ip", type=str, default=None)
-    parser.add_argument("--axon.external_port", type=int, default=None)
+    parser.add_argument("--axon.external_ip", type=str, default="[::]")
+    parser.add_argument("--axon.external_port", type=int, default=8000)
     parser.add_argument("--logging.level", type=str, choices=["info", "debug", "trace"], default="info")
     parser.add_argument("--logging.logging_dir", type=str, default="~/.bittensor/validators")
     parser.add_argument(
