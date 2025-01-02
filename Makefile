@@ -1,11 +1,13 @@
 ################################################################################
 #                               User Parameters                                #
 ################################################################################
-coldkey = default
-validator_hotkey = validator
-miner_hotkey = miner
-netuid = $(testnet_netuid)
-network = $(testnet)
+coldkey = validator
+# coldkey = miner
+validator_hotkey = default
+miner_hotkey = default
+netuid = $(localnet_netuid)
+network = $(localnet)
+logging_level = trace
 
 
 ################################################################################
@@ -13,11 +15,11 @@ network = $(testnet)
 ################################################################################
 finney = wss://entrypoint-finney.opentensor.ai:443
 testnet = wss://test.finney.opentensor.ai:443
-locanet = ws://127.0.0.1:9944
+localnet = ws://127.0.0.1:9945
 
 testnet_netuid = 256
 localnet_netuid = 1
-logging_level = info # options= ['info', 'debug', 'trace']
+logging_level = debug # options= ['info', 'debug', 'trace']
 
 
 ################################################################################
