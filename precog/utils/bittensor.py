@@ -30,7 +30,7 @@ def setup_bittensor_objects(self):
     # Initialize axon config
     axon_config = bt.axon.config()
     axon_config.max_workers = self.config.axon.max_workers
-    axon_config.port = self.config.axon.port 
+    axon_config.port = self.config.axon.port
     axon_config.ip = self.config.axon.ip
     axon_config.external_ip = self.config.axon.external_ip
     axon_config.external_port = self.config.axon.external_port
@@ -50,7 +50,7 @@ def setup_bittensor_objects(self):
         ip=self.config.axon.ip,
         external_ip=self.config.axon.external_ip,
         external_port=self.config.axon.external_port,
-        max_workers=self.config.axon.max_workers
+        max_workers=self.config.axon.max_workers,
     )
     # Connect the validator to the network.
     if self.wallet.hotkey.ss58_address not in self.metagraph.hotkeys:
