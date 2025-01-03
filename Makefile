@@ -1,71 +1,53 @@
-################################################################################
-#                               User Parameters                                #
-################################################################################
-coldkey = validator
-# coldkey = miner
-validator_hotkey = default
-miner_hotkey = default
-netuid = $(localnet_netuid)
-network = $(localnet)
-logging_level = trace
+ENV_FILE ?= .env
 
+include $(ENV_FILE)
+export
 
-################################################################################
-#                             Network Parameters                               #
-################################################################################
 finney = wss://entrypoint-finney.opentensor.ai:443
 testnet = wss://test.finney.opentensor.ai:443
 localnet = ws://127.0.0.1:9945
 
-testnet_netuid = 256
-localnet_netuid = 1
-logging_level = debug # options= ['info', 'debug', 'trace']
-
-
-################################################################################
-#                                 Commands                                     #
-################################################################################
+ifeq ($(NETWORK),localnet)
+   netuid = 1
+else ifeq ($(NETWORK),testnet)
+   netuid = 256
+else ifeq ($(NETWORK),finney)
+   netuid = 64
+endif
 
 metagraph:
-	btcli subnet metagraph --netuid $(netuid) --subtensor.chain_endpoint $(network)
+	btcli subnet metagraph --netuid $(netuid) --subtensor.chain_endpoint $($(NETWORK))
 
 register:
 	{ \
 		read -p 'Wallet name?: ' wallet_name ;\
 		read -p 'Hotkey?: ' hotkey_name ;\
-		btcli subnet register --netuid $(netuid) --wallet.name "$$wallet_name" --wallet.hotkey "$$hotkey_name" --subtensor.chain_endpoint $(network) ;\
+		btcli subnet register --netuid $(netuid) --wallet.name "$$wallet_name" --wallet.hotkey "$$hotkey_name" --subtensor.chain_endpoint $($(NETWORK)) ;\
 	}
+
 validator:
 	python start_validator.py \
-		--neuron.name validator \
-		--wallet.name $(coldkey) \
-		--wallet.hotkey $(validator_hotkey) \
-		--subtensor.chain_endpoint $(network) \
-		--axon.port 8091 \
+		--neuron.name $(VALIDATOR_NAME) \
+		--wallet.name $(COLDKEY) \
+		--wallet.hotkey $(VALIDATOR_HOTKEY) \
+		--subtensor.chain_endpoint $($(NETWORK)) \
+		--axon.port $(VALIDATOR_PORT) \
+		--axon.ip $(AXON_IP) \
+		--axon.external_ip $(AXON_EXTERNAL_IP) \
 		--netuid $(netuid) \
-		--logging.level $(logging_level)
+		--logging.level $(LOGGING_LEVEL)
 
 miner:
 	python start_miner.py \
-		--neuron.name miner \
-		--wallet.name $(coldkey) \
-		--wallet.hotkey $(miner_hotkey) \
-		--subtensor.chain_endpoint $(network) \
-		--axon.port 8092 \
+		--neuron.name $(MINER_NAME) \
+		--wallet.name $(COLDKEY) \
+		--wallet.hotkey $(MINER_HOTKEY) \
+		--subtensor.chain_endpoint $($(NETWORK)) \
+		--axon.port $(MINER_PORT) \
+		--axon.ip $(AXON_IP) \
+		--axon.external_ip $(AXON_EXTERNAL_IP) \
 		--netuid $(netuid) \
-		--logging.level $(logging_level) \
-		--timeout 16 \
-		--vpermit_tao_limit 2 \
-		--forward_function base_miner
-
-custom_miner:
-	python start_miner.py \
-		--neuron.name custom_miner \
-		--wallet.name $(coldkey) \
-		--wallet.hotkey miner2 \
-		--subtensor.chain_endpoint $(network) \
-		--axon.port 8093 \
-		--netuid $(netuid) \
-		--logging.level $(logging_level) \
-		--timeout 16 \
-		--forward_function custom_function
+		--logging.level $(LOGGING_LEVEL) \
+		--timeout $(TIMEOUT) \
+		--vpermit_tao_limit $(VPERMIT_TAO_LIMIT) \
+		--forward_function $(FORWARD_FUNCTION)
