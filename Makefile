@@ -12,7 +12,8 @@ ifeq ($(NETWORK),localnet)
 else ifeq ($(NETWORK),testnet)
    netuid = 256
 else ifeq ($(NETWORK),finney)
-   netuid = 64
+   #netuid = 64
+   $(error Finney network not supported yet)
 endif
 
 metagraph:
