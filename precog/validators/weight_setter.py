@@ -127,6 +127,9 @@ class weight_setter:
         if self.blocks_since_last_update >= self.hyperparameters.weights_rate_limit:
             uids = array(self.available_uids)
             weights = [self.moving_average_scores[uid] for uid in self.available_uids]
+            if not weights:
+                bt.logging.error("No weights to set, skipping")
+                return
             for i, j in zip(weights, self.available_uids):
                 bt.logging.debug(f"UID: {j}  |  Weight: {i}")
             if sum(weights) == 0:
@@ -167,16 +170,16 @@ class weight_setter:
                 responses, self.timestamp = self.query_miners()
                 try:
                     rewards = calc_rewards(self, responses=responses)
+                    # Adjust the scores based on responses from miners and update moving average.
+                    for i, value in zip(self.available_uids, rewards):
+                        self.moving_average_scores[i] = (1 - self.config.alpha) * self.moving_average_scores[
+                            i
+                        ] + self.config.alpha * value
+                        self.scores = list(self.moving_average_scores.values())
+                    if self.config.wandb_on:
+                        log_wandb(responses, rewards, self.available_uids)
                 except Exception as e:
                     bt.logging.error(f"Failed to calculate rewards with error: {e}")
-                # Adjust the scores based on responses from miners and update moving average.
-                for i, value in zip(self.available_uids, rewards):
-                    self.moving_average_scores[i] = (1 - self.config.alpha) * self.moving_average_scores[
-                        i
-                    ] + self.config.alpha * value
-                    self.scores = list(self.moving_average_scores.values())
-                if self.config.wandb_on:
-                    log_wandb(responses, rewards, self.available_uids)
             else:
                 print_info(self)
 

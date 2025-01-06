@@ -4,6 +4,15 @@ import bittensor as bt
 
 
 def setup_bittensor_objects(self):
+    if self.config.logging.level == "trace":
+        bt.logging.set_trace()
+    elif self.config.logging.level == "debug":
+        bt.logging.set_debug()
+    else:
+        # set to info by default
+        pass
+    bt.logging.info(f"Set logging level to {self.config.logging.level}")
+
     # if chain enpoint isn't set, use the network arg
     if self.config.subtensor.chain_endpoint is None:
         self.config.subtensor.chain_endpoint = bt.subtensor.determine_chain_endpoint_and_network(
@@ -17,7 +26,32 @@ def setup_bittensor_objects(self):
     self.metagraph = self.subtensor.metagraph(self.config.netuid)
     self.wallet = bt.wallet(config=self.config)
     self.dendrite = bt.dendrite(wallet=self.wallet)
-    self.axon = bt.axon(wallet=self.wallet, config=self.config, port=self.config.axon.port)
+
+    # Initialize axon config
+    axon_config = bt.axon.config()
+    axon_config.max_workers = self.config.axon.max_workers
+    axon_config.port = self.config.axon.port
+    axon_config.ip = self.config.axon.ip
+    axon_config.external_ip = self.config.axon.external_ip
+    axon_config.external_port = self.config.axon.external_port
+    self.config.axon = axon_config
+
+    # Debug prints
+    bt.logging.debug(f"Axon config - port: {self.config.axon.port}")
+    bt.logging.debug(f"Axon config - ip: {self.config.axon.ip}")
+    bt.logging.debug(f"Axon config - external_ip: {self.config.axon.external_ip}")
+    bt.logging.debug(f"Axon config - external_port: {self.config.axon.external_port}")
+    bt.logging.debug(f"Axon config - max_workers: {self.config.axon.max_workers}")
+
+    self.axon = bt.axon(
+        wallet=self.wallet,
+        config=self.config,
+        port=self.config.axon.port,
+        ip=self.config.axon.ip,
+        external_ip=self.config.axon.external_ip,
+        external_port=self.config.axon.external_port,
+        max_workers=self.config.axon.max_workers,
+    )
     # Connect the validator to the network.
     if self.wallet.hotkey.ss58_address not in self.metagraph.hotkeys:
         bt.logging.error(
@@ -28,15 +62,7 @@ def setup_bittensor_objects(self):
         # Each validator gets a unique identity (UID) in the network.
         self.my_uid = self.metagraph.hotkeys.index(self.wallet.hotkey.ss58_address)
         bt.logging.info(f"Running {self.config.neuron.type} on uid: {self.my_uid}")
-    # logging setup
-    if self.config.logging.level == "trace":
-        bt.logging.set_trace()
-    elif self.config.logging.level == "debug":
-        bt.logging.set_debug()
-    else:
-        # set to info by default
-        pass
-    bt.logging.info(f"Set logging level to {self.config.logging.level}")
+
     full_path = Path(
         f"~/.bittensor/{self.config.neuron.type}s/{self.config.wallet.name}/{self.config.wallet.hotkey}/netuid{self.config.netuid}/{self.config.neuron.type}"
     ).expanduser()
