@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "precog"
-version = "0.2.0"
+version = "0.3.0"
 description = "Bitcoin Price Prediction Subnet"
 authors = ["Coin Metrics", "Yuma Group"]
 readme = "README.md"
@@ -14,7 +14,7 @@ readme = "README.md"
 python = ">= 3.9, < 3.12"
 
 # Bittensor Version Strict
-bittensor = "8.3.1"
+bittensor = "8.5.1"
 
 # Bittensor Dependencies We Also Need
 setuptools = "~70.0.0"
@@ -28,6 +28,7 @@ pytz = "^2024.2"
 pandas = "^2.2.3"
 gitpython = "^3.1.43"
 wandb = "^0.18.6"
+bittensor-cli = "^8.4.2"
 
 
 [tool.poetry.group.dev.dependencies]

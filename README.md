@@ -57,7 +57,7 @@ cd precog
 
 Create and source a python virtual environment:
 ```
-python3 -m venv
+python3 -m venv .venv
 source .venv/bin/activate
 ```
 
@@ -71,7 +71,7 @@ poetry install
 ## Configuration
 
 ### Makefile
-Start by editing the Makefile with you wallet and network information:
+Start by editing the Makefile with your wallet and network information:
 ```
 ################################################################################
 #                               User Parameters                                #
@@ -83,6 +83,21 @@ netuid = $(testnet_netuid)
 network = $(testnet)
 ```
 
+### .env Files
+Copy the example `.env` files and edit all desired values:
+
+#### .env.validator
+```
+cp .env.validator.example .env.validator
+```
+Edit `.env.validator` with your desired values.
+
+#### .env.miner
+```
+cp .env.miner.example .env.miner
+```
+Edit `.env.miner` with your desired values.
+
 ### Wandb
 Wandb integration is planned for mainnet launch and does not currently work.
 
@@ -93,7 +108,7 @@ Wandb integration is planned for mainnet launch and does not currently work.
 Base miner:
 1. Run the command:
     ```
-    make miner
+    make miner ENV_FILE=.env.miner
     ```
 
 Custom miner:
@@ -107,18 +122,18 @@ Custom miner:
     - replace the `--forward_function base_miner` with `--forward_function your_file`
 3. Run the Command:
     ```
-    make miner_custom
+    make miner_custom ENV_FILE=.env.custom
     ```
 
 
 ### Running a Validator
 ```
-make validator
+make validator ENV_FILE=.env.validator
 ```
 
 
 ## Incentive Mechanism
-Incentive mechanism whitepaper coming soon.
+Read the [Incentive mechanism whitepaper](https://github.com/coinmetrics/precog/tree/master/docs/precog_Incentive_mechanism.pdf) for an in-depth explanation of the mechanism.
 
 Briefly, miners are rewarded based on two factors:
 1. A point estimate for the price of BTC in USD one hour from prediction time
