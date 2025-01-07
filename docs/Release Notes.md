@@ -1,6 +1,12 @@
 Release Notes
 =============
 
+0.3.0
+-----
+Released on January 7th 2025
+- Update to bittensor v8.5.1
+- Implement CR3
+
 0.2.0
 -----
 Released on December 20th 2024
