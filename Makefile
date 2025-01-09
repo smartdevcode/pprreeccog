@@ -9,13 +9,10 @@ localnet = ws://127.0.0.1:9945
 
 ifeq ($(NETWORK),localnet)
    netuid = 1
-   chain = $(localnet)
 else ifeq ($(NETWORK),testnet)
    netuid = 256
-   chain = $(testnet)
 else ifeq ($(NETWORK),finney)
    #netuid = 64
-   chain = $(finney)
    $(error Finney network not supported yet)
 endif
 
