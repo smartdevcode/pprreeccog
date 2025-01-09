@@ -1,3 +1,4 @@
+import argparse
 import asyncio
 import importlib
 import time
@@ -11,7 +12,7 @@ from substrateinterface import Keypair, SubstrateInterface
 from precog.protocol import Challenge
 from precog.utils.bittensor import print_info, setup_bittensor_objects
 from precog.utils.config import config
-from precog.utils.general import parse_arguments
+
 
 
 class Miner:
@@ -20,7 +21,7 @@ class Miner:
     """
 
     def __init__(self, config=None):
-        args = parse_arguments()
+        parser = argparse.ArgumentParser()
         config = config(args)
         self.forward_module = importlib.import_module(f"precog.miners.{config.forward_function}")
         self.config = config
