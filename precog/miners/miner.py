@@ -21,7 +21,6 @@ class Miner:
     """
 
     def __init__(self, config=None):
-        bt.logging.info(f"Config: {config}")
         self.forward_module = importlib.import_module(f"precog.miners.{config.forward_function}")
         self.config = config
         self.config.neuron.type = "Miner"
