@@ -108,7 +108,7 @@ class weight_setter:
                 self.hotkeys = {uid: value for uid, value in enumerate(self.metagraph.hotkeys)}
                 self.MinerHistory[uid] = MinerHistory(uid, timezone=self.timezone)
                 self.moving_average_scores[uid] = 0
-	        self.scores = list(self.moving_average_scores.values())
+                self.scores = list(self.moving_average_scores.values())
         self.save_state()
 
     def query_miners(self):
