@@ -130,7 +130,14 @@ class weight_setter:
             self.current_block = func_with_retry(self.subtensor.get_current_block)
         except Exception as e:
             bt.logging.error(f"Failed to get current block with error {e}, skipping block update")
+            return
+
         if self.blocks_since_last_update >= self.hyperparameters.weights_rate_limit:
+            for uid in self.available_uids:
+                if uid not in self.moving_average_scores:
+                    bt.logging.debug(f"Initializing score for new UID: {uid}")
+                    self.moving_average_scores[uid] = 0.0
+
             uids = array(self.available_uids)
             weights = [self.moving_average_scores[uid] for uid in self.available_uids]
             if not weights:
