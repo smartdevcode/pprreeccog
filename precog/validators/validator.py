@@ -10,7 +10,6 @@ from precog.validators.weight_setter import weight_setter
 class Validator:
     def __init__(self, config):
         self.config = config
-        print(self.config)
         full_path = Path(
             f"{self.config.logging.logging_dir}/{self.config.wallet.name}/{self.config.wallet.hotkey}/netuid{self.config.netuid}/validator"
         ).expanduser()
