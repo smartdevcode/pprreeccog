@@ -169,7 +169,7 @@ def add_miner_args(parser):
 
     parser.add_argument("--forward_function", 
         type=str, 
-        default="forward", 
+        default="base_miner", 
         help="name of the forward function to use",
         )
 

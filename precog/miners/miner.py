@@ -217,6 +217,6 @@ class Miner:
 # Run the miner
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    config = config(parser)
+    config = config(parser, neuron_type="miner")
     miner = Miner(config=config)
     miner.loop.run_forever()

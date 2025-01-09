@@ -28,6 +28,6 @@ class Validator:
 # Run the validator.
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    config = config(parser)
+    config = config(parser, neuron_type="validator")
     validator = Validator(config)
     asyncio.run(validator.main())
