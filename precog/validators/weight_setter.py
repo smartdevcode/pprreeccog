@@ -95,14 +95,28 @@ class weight_setter:
         self.metagraph.sync(subtensor=self.subtensor)
         bt.logging.info("Metagraph updated, re-syncing hotkeys, dendrite pool and moving averages")
         # Zero out all hotkeys that have been replaced.
-        self.available_uids = asyncio.run(self.get_available_uids())
-        for uid, hotkey in enumerate(self.metagraph.hotkeys):
-            if (uid not in self.MinerHistory and uid in self.available_uids) or self.hotkeys[uid] != hotkey:
-                bt.logging.info(f"Replacing hotkey on {uid} with {self.metagraph.hotkeys[uid]}")
-                self.hotkeys = self.metagraph.hotkeys
+        self.available_uids = await self.get_available_uids()
+
+        new_hotkeys = self.metagraph.hotkeys
+
+        # Process each UID
+        for uid in range(len(new_hotkeys)):
+            # Check if this is a new UID or if the hotkey has changed
+            is_new_uid = uid not in self.MinerHistory and uid in self.available_uids
+            has_hotkey_changed = (
+                uid < len(self.hotkeys) and uid < len(new_hotkeys) and self.hotkeys[uid] != new_hotkeys[uid]
+            )
+
+            if is_new_uid or has_hotkey_changed:
+                bt.logging.info(f"Replacing hotkey on {uid} with {new_hotkeys[uid]}")
                 self.MinerHistory[uid] = MinerHistory(uid, timezone=self.timezone)
                 self.moving_average_scores[uid] = 0
-                self.scores = list(self.moving_average_scores.values())
+
+        # Update hotkeys after processing
+        self.hotkeys = new_hotkeys
+        self.scores = list(self.moving_average_scores.values())
+
+        # Save the updated state
         self.save_state()
 
     def query_miners(self):
