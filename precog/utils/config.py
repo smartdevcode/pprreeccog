@@ -167,7 +167,11 @@ def add_miner_args(parser):
         help="Wandb entity to log to.",
     )
 
-    parser.add_argument("--forward_function", type=str, default="forward", help="name of the forward function to use")
+    parser.add_argument("--forward_function", 
+        type=str, 
+        default="forward", 
+        help="name of the forward function to use",
+        )
 
 
 def add_validator_args(parser):
