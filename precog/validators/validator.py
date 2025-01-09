@@ -3,7 +3,7 @@ import asyncio
 from pathlib import Path
 
 import bittensor as bt
-from precog.utils.config import config,add_args, add_validator_args
+from precog.utils.config import config, add_args, add_validator_args
 from precog.validators.weight_setter import weight_setter
 
 
@@ -29,8 +29,6 @@ class Validator:
 # Run the validator.
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    add_args(parser)
-    add_validator_args(parser)
-    config = bt.config(parser)
+    config = config(parser)
     validator = Validator(config)
     asyncio.run(validator.main())

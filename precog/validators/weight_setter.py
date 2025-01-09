@@ -83,7 +83,7 @@ class weight_setter:
     async def get_available_uids(self):
         miner_uids = []
         for uid in range(len(self.metagraph.S)):
-            uid_is_available = check_uid_availability(self.metagraph, uid, self.config.vpermit_tao_limit)
+            uid_is_available = check_uid_availability(self.metagraph, uid, self.config.neuron.vpermit_tao_limit)
             if uid_is_available:
                 miner_uids.append(uid)
         return miner_uids
