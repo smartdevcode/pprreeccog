@@ -35,6 +35,7 @@ validator:
 		--axon.port $(VALIDATOR_PORT) \
 		--axon.ip $(AXON_IP) \
 		--axon.external_ip $(AXON_EXTERNAL_IP) \
+		--axon.external_port $(AXON_EXTERNAL_PORT) \
 		--netuid $(netuid) \
 		--logging.level $(LOGGING_LEVEL)
 
@@ -47,6 +48,7 @@ miner:
 		--axon.port $(MINER_PORT) \
 		--axon.ip $(AXON_IP) \
 		--axon.external_ip $(AXON_EXTERNAL_IP) \
+		--axon.external_port $(AXON_EXTERNAL_PORT) \
 		--netuid $(netuid) \
 		--logging.level $(LOGGING_LEVEL) \
 		--timeout $(TIMEOUT) \
