@@ -43,7 +43,7 @@ miner:
 		--wallet.name $(COLDKEY) \
 		--wallet.hotkey $(MINER_HOTKEY) \
 		--subtensor.chain_endpoint $($(NETWORK)) \
-		--axon.port $(MINER_PORT)
+		--axon.port $(MINER_PORT) \
 		--netuid $(netuid) \
 		--logging.level $(LOGGING_LEVEL) \
 		--timeout $(TIMEOUT) \
