@@ -176,16 +176,16 @@ class weight_setter:
                 responses, self.timestamp = self.query_miners()
                 try:
                     rewards = calc_rewards(self, responses=responses)
+                    # Adjust the scores based on responses from miners and update moving average.
+                    for i, value in zip(self.available_uids, rewards):
+                        self.moving_average_scores[i] = (
+                            1 - self.config.neuron.moving_average_alpha
+                        ) * self.moving_average_scores[i] + self.config.neuron.moving_average_alpha * value
+                        self.scores = list(self.moving_average_scores.values())
+                    if not self.config.wandb.off:
+                        log_wandb(responses, rewards, self.available_uids)
                 except Exception as e:
                     bt.logging.error(f"Failed to calculate rewards with error: {e}")
-                # Adjust the scores based on responses from miners and update moving average.
-                for i, value in zip(self.available_uids, rewards):
-                    self.moving_average_scores[i] = (
-                        1 - self.config.neuron.moving_average_alpha
-                    ) * self.moving_average_scores[i] + self.config.neuron.moving_average_alpha * value
-                    self.scores = list(self.moving_average_scores.values())
-                if not self.config.wandb.off:
-                    log_wandb(responses, rewards, self.available_uids)
             else:
                 print_info(self)
 
