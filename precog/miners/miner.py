@@ -21,8 +21,6 @@ class Miner:
     """
 
     def __init__(self, config=None):
-        parser = argparse.ArgumentParser()
-        config = config(args)
         self.forward_module = importlib.import_module(f"precog.miners.{config.forward_function}")
         self.config = config
         self.config.neuron.type = "Miner"
@@ -217,7 +215,7 @@ class Miner:
 
 # Run the miner
 if __name__ == "__main__":
-    args = parse_arguments()
-    config = Config(args)
+    parser = argparse.ArgumentParser()
+    config = config(parser)
     miner = Miner(config=config)
     miner.loop.run_forever()
