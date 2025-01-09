@@ -32,7 +32,7 @@ class weight_setter:
             f"Running validator for subnet: {self.config.netuid} on network: {self.config.subtensor.network}"
         )
         self.available_uids = asyncio.run(self.get_available_uids())
-        self.hotkeys = self.metagraph.hotkeys
+        self.hotkeys = {uid: value for uid, value in enumerate(self.metagraph.hotkeys)}
         if self.config.reset_state:
             self.scores = [0.0] * len(self.metagraph.S)
             self.moving_average_scores = {uid: 0 for uid in self.metagraph.uids}
@@ -44,7 +44,7 @@ class weight_setter:
         self.blocks_since_last_update = self.subtensor.blocks_since_last_update(
             netuid=self.config.netuid, uid=self.my_uid
         )
-        if self.config.wandb_on:
+        if not self.config.wandb.off:
             setup_wandb(self)
         self.stop_event = asyncio.Event()
         bt.logging.info("Setup complete, starting loop")
@@ -83,7 +83,7 @@ class weight_setter:
     async def get_available_uids(self):
         miner_uids = []
         for uid in range(len(self.metagraph.S)):
-            uid_is_available = check_uid_availability(self.metagraph, uid, self.config.vpermit_tao_limit)
+            uid_is_available = check_uid_availability(self.metagraph, uid, self.config.neuron.vpermit_tao_limit)
             if uid_is_available:
                 miner_uids.append(uid)
         return miner_uids
@@ -97,9 +97,15 @@ class weight_setter:
         # Zero out all hotkeys that have been replaced.
         self.available_uids = asyncio.run(self.get_available_uids())
         for uid, hotkey in enumerate(self.metagraph.hotkeys):
-            if (uid not in self.MinerHistory and uid in self.available_uids) or self.hotkeys[uid] != hotkey:
+            new_miner = uid not in self.hotkeys
+            # replaced_miner will throw a key error if the uid is not in the hotkeys dict
+            if not new_miner:
+                replaced_miner = self.hotkeys[uid] != hotkey
+            else:
+                replaced_miner = False
+            if new_miner or replaced_miner:
                 bt.logging.info(f"Replacing hotkey on {uid} with {self.metagraph.hotkeys[uid]}")
-                self.hotkeys = self.metagraph.hotkeys
+                self.hotkeys = {uid: value for uid, value in enumerate(self.metagraph.hotkeys)}
                 self.MinerHistory[uid] = MinerHistory(uid, timezone=self.timezone)
                 self.moving_average_scores[uid] = 0
                 self.scores = list(self.moving_average_scores.values())
@@ -170,16 +176,16 @@ class weight_setter:
                 responses, self.timestamp = self.query_miners()
                 try:
                     rewards = calc_rewards(self, responses=responses)
-                    # Adjust the scores based on responses from miners and update moving average.
-                    for i, value in zip(self.available_uids, rewards):
-                        self.moving_average_scores[i] = (1 - self.config.alpha) * self.moving_average_scores[
-                            i
-                        ] + self.config.alpha * value
-                        self.scores = list(self.moving_average_scores.values())
-                    if self.config.wandb_on:
-                        log_wandb(responses, rewards, self.available_uids)
                 except Exception as e:
                     bt.logging.error(f"Failed to calculate rewards with error: {e}")
+                # Adjust the scores based on responses from miners and update moving average.
+                for i, value in zip(self.available_uids, rewards):
+                    self.moving_average_scores[i] = (
+                        1 - self.config.neuron.moving_average_alpha
+                    ) * self.moving_average_scores[i] + self.config.neuron.moving_average_alpha * value
+                    self.scores = list(self.moving_average_scores.values())
+                if not self.config.wandb.off:
+                    log_wandb(responses, rewards, self.available_uids)
             else:
                 print_info(self)
 
