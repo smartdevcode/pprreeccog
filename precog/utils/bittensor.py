@@ -89,7 +89,7 @@ def print_info(self) -> None:
             f"VTrust:{self.metagraph.Tv[self.my_uid]:.3f} | "
             f"Dividend:{self.metagraph.D[self.my_uid]:.3f} | "
             f"Emission:{self.metagraph.E[self.my_uid]:.3f} | "
-            f"Seting weights in {weight_timing} blocks"
+            f"Setting weights in {weight_timing} blocks"
         )
     elif self.config.neuron.type == "Miner":
         log = (
