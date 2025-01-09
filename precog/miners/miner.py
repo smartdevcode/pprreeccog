@@ -14,7 +14,6 @@ from precog.utils.bittensor import print_info, setup_bittensor_objects
 from precog.utils.config import config
 
 
-
 class Miner:
     """
     Optimized Miner to handle ultra-fast requests with low latency.

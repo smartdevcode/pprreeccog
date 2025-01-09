@@ -2,7 +2,6 @@ import argparse
 import asyncio
 from pathlib import Path
 
-import bittensor as bt
 from precog.utils.config import config
 from precog.validators.weight_setter import weight_setter
 

@@ -1,5 +1,3 @@
-ENV_FILE ?= .env.validator
-
 include $(ENV_FILE)
 export
 
