@@ -32,7 +32,7 @@ class weight_setter:
             f"Running validator for subnet: {self.config.netuid} on network: {self.config.subtensor.network}"
         )
         self.available_uids = asyncio.run(self.get_available_uids())
-        self.hotkeys = self.metagraph.hotkeys
+        self.hotkeys = {uid: value for uid, value in enumerate(self.metagraph.hotkeys)}
         if self.config.reset_state:
             self.scores = [0.0] * len(self.metagraph.S)
             self.moving_average_scores = {uid: 0 for uid in self.metagraph.uids}
@@ -97,13 +97,17 @@ class weight_setter:
         # Zero out all hotkeys that have been replaced.
         self.available_uids = asyncio.run(self.get_available_uids())
         for uid, hotkey in enumerate(self.metagraph.hotkeys):
-            if (uid not in self.MinerHistory and uid in self.available_uids) or self.hotkeys[uid] != hotkey:
+            new_miner = uid not in self.hotkeys
+            # replaced_miner will throw a key error if the uid is not in the hotkeys dict
+            if not new_miner:
+                replaced_miner = self.hotkeys[uid] != hotkey
+            else:
+                replaced_miner = False
+            if new_miner or replaced_miner:
                 bt.logging.info(f"Replacing hotkey on {uid} with {self.metagraph.hotkeys[uid]}")
-                self.hotkeys = self.metagraph.hotkeys
-                self.hotkeys = self.metagraph.hotkeys
+                self.hotkeys = {uid: value for uid, value in enumerate(self.metagraph.hotkeys)}
                 self.MinerHistory[uid] = MinerHistory(uid, timezone=self.timezone)
                 self.moving_average_scores[uid] = 0
-                self.scores = list(self.moving_average_scores.values())
                 self.scores = list(self.moving_average_scores.values())
         self.save_state()
 
