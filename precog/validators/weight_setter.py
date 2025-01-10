@@ -130,7 +130,14 @@ class weight_setter:
             self.current_block = func_with_retry(self.subtensor.get_current_block)
         except Exception as e:
             bt.logging.error(f"Failed to get current block with error {e}, skipping block update")
+            return
+
         if self.blocks_since_last_update >= self.hyperparameters.weights_rate_limit:
+            for uid in self.available_uids:
+                if uid not in self.moving_average_scores:
+                    bt.logging.debug(f"Initializing score for new UID: {uid}")
+                    self.moving_average_scores[uid] = 0.0
+
             uids = array(self.available_uids)
             weights = [self.moving_average_scores[uid] for uid in self.available_uids]
             if not weights:
@@ -176,16 +183,16 @@ class weight_setter:
                 responses, self.timestamp = self.query_miners()
                 try:
                     rewards = calc_rewards(self, responses=responses)
+                    # Adjust the scores based on responses from miners and update moving average.
+                    for i, value in zip(self.available_uids, rewards):
+                        self.moving_average_scores[i] = (
+                            1 - self.config.neuron.moving_average_alpha
+                        ) * self.moving_average_scores[i] + self.config.neuron.moving_average_alpha * value
+                        self.scores = list(self.moving_average_scores.values())
+                    if not self.config.wandb.off:
+                        log_wandb(responses, rewards, self.available_uids)
                 except Exception as e:
                     bt.logging.error(f"Failed to calculate rewards with error: {e}")
-                # Adjust the scores based on responses from miners and update moving average.
-                for i, value in zip(self.available_uids, rewards):
-                    self.moving_average_scores[i] = (
-                        1 - self.config.neuron.moving_average_alpha
-                    ) * self.moving_average_scores[i] + self.config.neuron.moving_average_alpha * value
-                    self.scores = list(self.moving_average_scores.values())
-                if not self.config.wandb.off:
-                    log_wandb(responses, rewards, self.available_uids)
             else:
                 print_info(self)
 
