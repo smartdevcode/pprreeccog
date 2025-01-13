@@ -31,32 +31,8 @@ def setup_bittensor_objects(self):
     self.metagraph = self.subtensor.metagraph(self.config.netuid)
     self.wallet = bt.wallet(config=self.config)
     self.dendrite = bt.dendrite(wallet=self.wallet)
-
-    # Initialize axon config
-    axon_config = bt.axon.config()
-    axon_config.max_workers = self.config.axon.max_workers
-    axon_config.port = self.config.axon.port
-    axon_config.ip = self.config.axon.ip
-    axon_config.external_ip = self.config.axon.external_ip
-    axon_config.external_port = self.config.axon.external_port
-    self.config.axon = axon_config
-
-    # Debug prints
-    bt.logging.debug(f"Axon config - port: {self.config.axon.port}")
-    bt.logging.debug(f"Axon config - ip: {self.config.axon.ip}")
-    bt.logging.debug(f"Axon config - external_ip: {self.config.axon.external_ip}")
-    bt.logging.debug(f"Axon config - external_port: {self.config.axon.external_port}")
-    bt.logging.debug(f"Axon config - max_workers: {self.config.axon.max_workers}")
-
-    self.axon = bt.axon(
-        wallet=self.wallet,
-        config=self.config,
-        port=self.config.axon.port,
-        ip=self.config.axon.ip,
-        external_ip=self.config.axon.external_ip,
-        external_port=self.config.axon.external_port,
-        max_workers=self.config.axon.max_workers,
-    )
+    self.axon = bt.axon(wallet=self.wallet, config=self.config, port=self.config.axon.port)
+    
     # Connect the validator to the network.
     if self.wallet.hotkey.ss58_address not in self.metagraph.hotkeys:
         bt.logging.error(
