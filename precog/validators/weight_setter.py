@@ -89,26 +89,69 @@ class weight_setter:
         return miner_uids
 
     async def resync_metagraph(self):
-        """Resyncs the metagraph and updates the hotkeys and moving averages based on the new metagraph."""
+        """Resyncs the metagraph and updates the hotkeys, available UIDs, and MinerHistory.
+        Ensures all data structures remain in sync."""
+        # Resync subtensor and metagraph
         self.subtensor = bt.subtensor(config=self.config, network=self.config.subtensor.chain_endpoint)
         bt.logging.info("Syncing Metagraph...")
         self.metagraph.sync(subtensor=self.subtensor)
         bt.logging.info("Metagraph updated, re-syncing hotkeys, dendrite pool and moving averages")
-        # Zero out all hotkeys that have been replaced.
+
+        # Get current state for logging
+        old_uids = set(self.available_uids)
+        old_history = set(self.MinerHistory.keys())
+        bt.logging.debug(f"Before sync - Available UIDs: {old_uids}")
+        bt.logging.debug(f"Before sync - MinerHistory keys: {old_history}")
+
+        # Update available UIDs
         self.available_uids = asyncio.run(self.get_available_uids())
+        new_uids = set(self.available_uids)
+
+        # Process hotkey changes
         for uid, hotkey in enumerate(self.metagraph.hotkeys):
             new_miner = uid not in self.hotkeys
-            # replaced_miner will throw a key error if the uid is not in the hotkeys dict
             if not new_miner:
                 replaced_miner = self.hotkeys[uid] != hotkey
             else:
                 replaced_miner = False
+                
             if new_miner or replaced_miner:
                 bt.logging.info(f"Replacing hotkey on {uid} with {self.metagraph.hotkeys[uid]}")
-                self.hotkeys = {uid: value for uid, value in enumerate(self.metagraph.hotkeys)}
+                self.moving_average_scores[uid] = 0
+                if uid in new_uids:  # Only create history for available UIDs
+                    self.MinerHistory[uid] = MinerHistory(uid, timezone=self.timezone)
+
+        # Update hotkeys dictionary
+        self.hotkeys = {uid: value for uid, value in enumerate(self.metagraph.hotkeys)}
+        
+        # Ensure all available UIDs have MinerHistory entries
+        for uid in self.available_uids:
+            if uid not in self.MinerHistory:
+                bt.logging.info(f"Creating new MinerHistory for available UID {uid}")
                 self.MinerHistory[uid] = MinerHistory(uid, timezone=self.timezone)
                 self.moving_average_scores[uid] = 0
-                self.scores = list(self.moving_average_scores.values())
+
+        # Clean up old MinerHistory entries
+        for uid in list(self.MinerHistory.keys()):
+            if uid not in new_uids:
+                bt.logging.info(f"Removing MinerHistory for inactive UID {uid}")
+                del self.MinerHistory[uid]
+
+        # Update scores list
+        self.scores = list(self.moving_average_scores.values())
+
+        # Log changes
+        added_uids = new_uids - old_uids
+        removed_uids = old_uids - new_uids
+        if added_uids:
+            bt.logging.info(f"Added UIDs: {added_uids}")
+        if removed_uids:
+            bt.logging.info(f"Removed UIDs: {removed_uids}")
+        
+        bt.logging.debug(f"After sync - Available UIDs: {new_uids}")
+        bt.logging.debug(f"After sync - MinerHistory keys: {set(self.MinerHistory.keys())}")
+        
+        # Save updated state
         self.save_state()
 
     def query_miners(self):
