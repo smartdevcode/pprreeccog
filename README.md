@@ -57,7 +57,7 @@ Before beginning, ensure you have:
 4. **System Requirements**
    - NodeJS and NPM (for PM2 installation)
    - Basic understanding of command-line interfaces
-   
+
 ## Installation
 
 First, install PM2:
@@ -94,7 +94,7 @@ poetry install
 ## Configuration
 
 ### .env Files
-Copy the example `.env` files and edit all desired values:
+Copy the example `.env` files and edit all desired values. If you are running a validator, you will only need to copy the .env.validator file. If you are running a miner, you will only need to copy the .env.miner file:
 
 #### .env.validator
 ```
@@ -118,7 +118,6 @@ VALIDATOR_PORT=8091
 # Logging
 # Options: info, debug, trace
 LOGGING_LEVEL=debug
-
 ```
 
 #### .env.miner
@@ -157,6 +156,9 @@ Wandb integration is planned for mainnet launch and does not currently work.
 
 ---
 ## Deployment
+
+### Registering a Hotkey
+Once you have configured your .env files as per the instructions above, you can register a miner with `make register ENV_FILE=.env.miner` or register a validator with `make register ENV_FILE=.env.validator`.
 
 ### Running a Miner
 Base miner:
