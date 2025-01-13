@@ -70,8 +70,6 @@ poetry install
 ---
 ## Configuration
 
-### Makefile
-
 ### .env Files
 Copy the example `.env` files and edit all desired values:
 
@@ -79,13 +77,57 @@ Copy the example `.env` files and edit all desired values:
 ```
 cp .env.validator.example .env.validator
 ```
-Edit `.env.validator` with your desired values.
+Edit `.env.validator` with your desired values. 
+
+```
+# Network Configuration
+# Options: localnet, testnet, finney
+NETWORK=testnet
+
+# Wallet Configuration
+COLDKEY=your_validator_coldkey
+VALIDATOR_HOTKEY=your_validator_hotkey
+
+# Node Configuration
+VALIDATOR_NAME=validator
+VALIDATOR_PORT=8091
+
+# Logging
+# Options: info, debug, trace
+LOGGING_LEVEL=debug
+
+```
 
 #### .env.miner
 ```
 cp .env.miner.example .env.miner
 ```
 Edit `.env.miner` with your desired values.
+
+```# Network Configuration
+# Options: localnet, testnet, finney
+NETWORK=testnet
+
+# Wallet Configuration
+COLDKEY=your_miner_coldkey
+MINER_HOTKEY=your_miner_hotkey
+
+# Node Configuration
+MINER_NAME=miner
+# This port must be open to accept incoming TCP connections.
+MINER_PORT=8092 
+
+# Miner Settings
+TIMEOUT=16
+VPERMIT_TAO_LIMIT=2
+
+#Adjust this function if you would like to specify a custom forward function
+FORWARD_FUNCTION=base_miner
+
+# Logging
+# Options: info, debug, trace
+LOGGING_LEVEL=debug
+```
 
 ### Wandb
 Wandb integration is planned for mainnet launch and does not currently work.
