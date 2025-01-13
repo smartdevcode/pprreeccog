@@ -35,6 +35,29 @@ The incentive mechanism was specifically designed to reward precise statements o
 |  2 vCPUs  |  2 vCPUs  |
 
 ---
+
+## Prerequisites
+
+Before beginning, ensure you have:
+
+1. **Python Installation**
+   - Python version 3.9, 3.10, or 3.11 installed
+   - We recommend using `pyenv` for Python version management
+
+2. **Bittensor Knowledge**
+   - Understanding of the Bittensor ecosystem and wallet management
+   - Familiarity with creating and managing Bittensor wallets
+   - Review the [Bittensor Wallet Documentation](https://docs.bittensor.com/getting-started/wallets)
+   - For general understanding, see the [Bittensor Documentation](https://docs.bittensor.com/)
+
+3. **Poetry**
+   - Basic understanding of Poetry for dependency management
+   - See the [Poetry Documentation](https://python-poetry.org/docs/) for installation and usage
+
+4. **System Requirements**
+   - NodeJS and NPM (for PM2 installation)
+   - Basic understanding of command-line interfaces
+   
 ## Installation
 
 First, install PM2:
