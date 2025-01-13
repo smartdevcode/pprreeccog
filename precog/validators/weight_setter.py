@@ -175,7 +175,13 @@ class weight_setter:
             if is_query_time(self.prediction_interval, self.timestamp) or query_lag >= 60 * self.prediction_interval:
                 responses, self.timestamp = self.query_miners()
                 try:
+                    bt.logging.debug(f"Processing responses for UIDs: {self.available_uids}")
+                    bt.logging.debug(f"Number of responses: {len(responses)}")
+                    for uid, response in zip(self.available_uids, responses):
+                        bt.logging.debug(f"Response from UID {uid}: {response}")
+                    
                     rewards = calc_rewards(self, responses=responses)
+                    
                     # Adjust the scores based on responses from miners and update moving average.
                     for i, value in zip(self.available_uids, rewards):
                         self.moving_average_scores[i] = (
@@ -185,7 +191,16 @@ class weight_setter:
                     if not self.config.wandb.off:
                         log_wandb(responses, rewards, self.available_uids)
                 except Exception as e:
-                    bt.logging.error(f"Failed to calculate rewards with error: {e}")
+                    import traceback
+                    bt.logging.error(f"Failed to calculate rewards with error: {str(e)}")
+                    bt.logging.error(f"Error type: {type(e)}")
+                    bt.logging.error("Full traceback:")
+                    bt.logging.error(traceback.format_exc())
+                    bt.logging.error(f"Available UIDs: {self.available_uids}")
+                    bt.logging.error(f"Response count: {len(responses)}")
+                    for uid, response in zip(self.available_uids, responses):
+                        bt.logging.error(f"UID {uid} response status: {getattr(response, 'status_code', 'unknown')}")
+                        bt.logging.error(f"UID {uid} response type: {type(response)}")
             else:
                 print_info(self)
 
