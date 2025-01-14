@@ -2,6 +2,15 @@
 
 # **CoinMetrics Precog Subnet** <!-- omit in toc -->
 
+<div align="center">
+
+| **Testnet UID:**  256 <br> **Mainnet UID:**  55 |
+| - |
+
+</div>
+
+<br/>
+
 |     |     |
 | :-: | :-: |
 | **Status** | <img src="https://img.shields.io/github/v/release/coinmetrics/precog?label=Release" height="25"/> <img src="https://img.shields.io/github/actions/workflow/status/coinmetrics/precog/ci.yml?label=Build" height="25"/> <br> <a href="https://github.com/pre-commit/pre-commit" target="_blank"> <img src="https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white&label=Pre-Commit" height="25"/> </a> <a href="https://github.com/psf/black" target="_blank"> <img src="https://img.shields.io/badge/code%20style-black-000000.svg?label=Code%20Style" height="25"/> </a> <br> <img src="https://img.shields.io/github/license/coinmetrics/precog?label=License" height="25"/> |
