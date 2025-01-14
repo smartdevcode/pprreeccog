@@ -3,7 +3,7 @@ export
 
 finney = wss://entrypoint-finney.opentensor.ai:443
 testnet = wss://test.finney.opentensor.ai:443
-localnet = ws://127.0.0.1:9945
+localnet = $(LOCALNET)
 
 ifeq ($(NETWORK),localnet)
    netuid = 1
