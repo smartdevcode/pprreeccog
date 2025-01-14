@@ -109,7 +109,7 @@ class weight_setter:
 
         # Process hotkey changes
         for uid, hotkey in enumerate(self.metagraph.hotkeys):
-            new_miner = uid not in self.hotkeys
+            new_miner = uid in new_uids and uid not in old_uids
             if not new_miner:
                 replaced_miner = self.hotkeys[uid] != hotkey
             else:
