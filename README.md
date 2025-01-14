@@ -160,9 +160,6 @@ FORWARD_FUNCTION=base_miner
 LOGGING_LEVEL=debug
 ```
 
-### Wandb
-Wandb integration is planned for mainnet launch and does not currently work.
-
 ---
 ## Deployment
 
