@@ -1,6 +1,11 @@
 Release Notes
 =============
 
+1.0.0
+-----
+Released on January 14th 2025
+- Release to mainnet
+
 0.3.0
 -----
 Released on January 7th 2025

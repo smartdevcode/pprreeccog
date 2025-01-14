@@ -20,38 +20,19 @@ def setup_bittensor_objects(self):
         )[1]
     else:
         # if chain endpoint is set, overwrite network arg
-        self.config.subtensor.network = self.config.subtensor.chain_endpoint
+        if "test" in self.config.subtensor.chain_endpoint:
+            self.config.subtensor.network = "test"
+        elif "finney" in self.config.subtensor.chain_endpoint:
+            self.config.subtensor.network = "finney"
+        else:
+            self.config.subtensor.network = self.config.subtensor.chain_endpoint
     # Initialize subtensor.
     self.subtensor = bt.subtensor(config=self.config, network=self.config.subtensor.chain_endpoint)
     self.metagraph = self.subtensor.metagraph(self.config.netuid)
     self.wallet = bt.wallet(config=self.config)
     self.dendrite = bt.dendrite(wallet=self.wallet)
+    self.axon = bt.axon(wallet=self.wallet, config=self.config, port=self.config.axon.port)
 
-    # Initialize axon config
-    axon_config = bt.axon.config()
-    axon_config.max_workers = self.config.axon.max_workers
-    axon_config.port = self.config.axon.port
-    axon_config.ip = self.config.axon.ip
-    axon_config.external_ip = self.config.axon.external_ip
-    axon_config.external_port = self.config.axon.external_port
-    self.config.axon = axon_config
-
-    # Debug prints
-    bt.logging.debug(f"Axon config - port: {self.config.axon.port}")
-    bt.logging.debug(f"Axon config - ip: {self.config.axon.ip}")
-    bt.logging.debug(f"Axon config - external_ip: {self.config.axon.external_ip}")
-    bt.logging.debug(f"Axon config - external_port: {self.config.axon.external_port}")
-    bt.logging.debug(f"Axon config - max_workers: {self.config.axon.max_workers}")
-
-    self.axon = bt.axon(
-        wallet=self.wallet,
-        config=self.config,
-        port=self.config.axon.port,
-        ip=self.config.axon.ip,
-        external_ip=self.config.axon.external_ip,
-        external_port=self.config.axon.external_port,
-        max_workers=self.config.axon.max_workers,
-    )
     # Connect the validator to the network.
     if self.wallet.hotkey.ss58_address not in self.metagraph.hotkeys:
         bt.logging.error(
@@ -68,6 +49,7 @@ def setup_bittensor_objects(self):
     ).expanduser()
     full_path.mkdir(parents=True, exist_ok=True)
     self.config.full_path = str(full_path)
+    bt.logging.info(f"Config: {self.config}")
 
 
 def print_info(self) -> None:
@@ -83,7 +65,7 @@ def print_info(self) -> None:
             f"VTrust:{self.metagraph.Tv[self.my_uid]:.3f} | "
             f"Dividend:{self.metagraph.D[self.my_uid]:.3f} | "
             f"Emission:{self.metagraph.E[self.my_uid]:.3f} | "
-            f"Seting weights in {weight_timing} blocks"
+            f"Setting weights in {weight_timing} blocks"
         )
     elif self.config.neuron.type == "Miner":
         log = (

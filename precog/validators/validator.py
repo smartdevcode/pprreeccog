@@ -1,16 +1,14 @@
+import argparse
 import asyncio
 from pathlib import Path
 
-from precog.utils.classes import Config
-from precog.utils.general import parse_arguments
+from precog.utils.config import config
 from precog.validators.weight_setter import weight_setter
 
 
 class Validator:
-    def __init__(self):
-        args = parse_arguments()
-        self.config = Config(args)
-        self.config.neuron.type = "Validator"
+    def __init__(self, config):
+        self.config = config
         full_path = Path(
             f"{self.config.logging.logging_dir}/{self.config.wallet.name}/{self.config.wallet.hotkey}/netuid{self.config.netuid}/validator"
         ).expanduser()
@@ -28,5 +26,7 @@ class Validator:
 
 # Run the validator.
 if __name__ == "__main__":
-    validator = Validator()
+    parser = argparse.ArgumentParser()
+    config = config(parser, neuron_type="validator")
+    validator = Validator(config)
     asyncio.run(validator.main())

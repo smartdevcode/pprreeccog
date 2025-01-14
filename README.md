@@ -2,6 +2,15 @@
 
 # **CoinMetrics Precog Subnet** <!-- omit in toc -->
 
+<div align="center">
+
+| **Testnet UID:**  256 <br> **Mainnet UID:**  55 |
+| - |
+
+</div>
+
+<br/>
+
 |     |     |
 | :-: | :-: |
 | **Status** | <img src="https://img.shields.io/github/v/release/coinmetrics/precog?label=Release" height="25"/> <img src="https://img.shields.io/github/actions/workflow/status/coinmetrics/precog/ci.yml?label=Build" height="25"/> <br> <a href="https://github.com/pre-commit/pre-commit" target="_blank"> <img src="https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white&label=Pre-Commit" height="25"/> </a> <a href="https://github.com/psf/black" target="_blank"> <img src="https://img.shields.io/badge/code%20style-black-000000.svg?label=Code%20Style" height="25"/> </a> <br> <img src="https://img.shields.io/github/license/coinmetrics/precog?label=License" height="25"/> |
@@ -35,6 +44,29 @@ The incentive mechanism was specifically designed to reward precise statements o
 |  2 vCPUs  |  2 vCPUs  |
 
 ---
+
+## Prerequisites
+
+Before beginning, ensure you have:
+
+1. **Python Installation**
+   - Python version 3.9, 3.10, or 3.11 installed
+   - We recommend using `pyenv` for Python version management
+
+2. **Bittensor Knowledge**
+   - Understanding of the Bittensor ecosystem and wallet management
+   - Familiarity with creating and managing Bittensor wallets
+   - Review the [Bittensor Wallet Documentation](https://docs.bittensor.com/getting-started/wallets)
+   - For general understanding, see the [Bittensor Documentation](https://docs.bittensor.com/)
+
+3. **Poetry**
+   - Basic understanding of Poetry for dependency management
+   - See the [Poetry Documentation](https://python-poetry.org/docs/) for installation and usage
+
+4. **System Requirements**
+   - NodeJS and NPM (for PM2 installation)
+   - Basic understanding of command-line interfaces
+
 ## Installation
 
 First, install PM2:
@@ -70,21 +102,8 @@ poetry install
 ---
 ## Configuration
 
-### Makefile
-Start by editing the Makefile with your wallet and network information:
-```
-################################################################################
-#                               User Parameters                                #
-################################################################################
-coldkey = default
-validator_hotkey = validator
-miner_hotkey = miner
-netuid = $(testnet_netuid)
-network = $(testnet)
-```
-
 ### .env Files
-Copy the example `.env` files and edit all desired values:
+Copy the example `.env` files and edit all desired values. If you are running a validator, you will only need to copy the .env.validator file. If you are running a miner, you will only need to copy the .env.miner file:
 
 #### .env.validator
 ```
@@ -92,17 +111,60 @@ cp .env.validator.example .env.validator
 ```
 Edit `.env.validator` with your desired values.
 
+```
+# Network Configuration
+# Options: localnet, testnet, finney
+NETWORK=testnet
+
+# Wallet Configuration
+COLDKEY=your_validator_coldkey
+VALIDATOR_HOTKEY=your_validator_hotkey
+
+# Node Configuration
+VALIDATOR_NAME=validator
+VALIDATOR_PORT=8091
+
+# Logging
+# Options: info, debug, trace
+LOGGING_LEVEL=debug
+```
+
 #### .env.miner
 ```
 cp .env.miner.example .env.miner
 ```
 Edit `.env.miner` with your desired values.
 
-### Wandb
-Wandb integration is planned for mainnet launch and does not currently work.
+```# Network Configuration
+# Options: localnet, testnet, finney
+NETWORK=testnet
+
+# Wallet Configuration
+COLDKEY=your_miner_coldkey
+MINER_HOTKEY=your_miner_hotkey
+
+# Node Configuration
+MINER_NAME=miner
+# This port must be open to accept incoming TCP connections.
+MINER_PORT=8092
+
+# Miner Settings
+TIMEOUT=16
+VPERMIT_TAO_LIMIT=2
+
+#Adjust this function if you would like to specify a custom forward function
+FORWARD_FUNCTION=base_miner
+
+# Logging
+# Options: info, debug, trace
+LOGGING_LEVEL=debug
+```
 
 ---
 ## Deployment
+
+### Registering a Hotkey
+Once you have configured your .env files as per the instructions above, you can register a miner with `make register ENV_FILE=.env.miner` or register a validator with `make register ENV_FILE=.env.validator`.
 
 ### Running a Miner
 Base miner:
