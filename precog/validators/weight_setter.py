@@ -173,7 +173,14 @@ class weight_setter:
             self.current_block = func_with_retry(self.subtensor.get_current_block)
         except Exception as e:
             bt.logging.error(f"Failed to get current block with error {e}, skipping block update")
+            return
+
         if self.blocks_since_last_update >= self.hyperparameters.weights_rate_limit:
+            for uid in self.available_uids:
+                if uid not in self.moving_average_scores:
+                    bt.logging.debug(f"Initializing score for new UID: {uid}")
+                    self.moving_average_scores[uid] = 0.0
+
             uids = array(self.available_uids)
             weights = [self.moving_average_scores[uid] for uid in self.available_uids]
             if not weights:
@@ -224,7 +231,7 @@ class weight_setter:
                         bt.logging.debug(f"Response from UID {uid}: {response}")
                     
                     rewards = calc_rewards(self, responses=responses)
-                    
+
                     # Adjust the scores based on responses from miners and update moving average.
                     for i, value in zip(self.available_uids, rewards):
                         self.moving_average_scores[i] = (
