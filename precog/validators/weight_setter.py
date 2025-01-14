@@ -89,26 +89,61 @@ class weight_setter:
         return miner_uids
 
     async def resync_metagraph(self):
-        """Resyncs the metagraph and updates the hotkeys and moving averages based on the new metagraph."""
+        """Resyncs the metagraph and updates the hotkeys, available UIDs, and MinerHistory.
+        Ensures all data structures remain in sync."""
+        # Resync subtensor and metagraph
         self.subtensor = bt.subtensor(config=self.config, network=self.config.subtensor.chain_endpoint)
         bt.logging.info("Syncing Metagraph...")
         self.metagraph.sync(subtensor=self.subtensor)
         bt.logging.info("Metagraph updated, re-syncing hotkeys, dendrite pool and moving averages")
-        # Zero out all hotkeys that have been replaced.
+
+        # Get current state for logging
+        old_uids = set(self.available_uids)
+        old_history = set(self.MinerHistory.keys())
+        bt.logging.debug(f"Before sync - Available UIDs: {old_uids}")
+        bt.logging.debug(f"Before sync - MinerHistory keys: {old_history}")
+
+        # Update available UIDs
         self.available_uids = asyncio.run(self.get_available_uids())
+        new_uids = set(self.available_uids)
+
+        # Process hotkey changes
         for uid, hotkey in enumerate(self.metagraph.hotkeys):
-            new_miner = uid not in self.hotkeys
-            # replaced_miner will throw a key error if the uid is not in the hotkeys dict
+            new_miner = uid in new_uids and uid not in old_uids
             if not new_miner:
                 replaced_miner = self.hotkeys[uid] != hotkey
             else:
                 replaced_miner = False
+
             if new_miner or replaced_miner:
                 bt.logging.info(f"Replacing hotkey on {uid} with {self.metagraph.hotkeys[uid]}")
-                self.hotkeys = {uid: value for uid, value in enumerate(self.metagraph.hotkeys)}
+                self.moving_average_scores[uid] = 0
+                if uid in new_uids:  # Only create history for available UIDs
+                    self.MinerHistory[uid] = MinerHistory(uid, timezone=self.timezone)
+
+        # Update hotkeys dictionary
+        self.hotkeys = {uid: value for uid, value in enumerate(self.metagraph.hotkeys)}
+
+        # Ensure all available UIDs have MinerHistory entries
+        for uid in self.available_uids:
+            if uid not in self.MinerHistory:
+                bt.logging.info(f"Creating new MinerHistory for available UID {uid}")
                 self.MinerHistory[uid] = MinerHistory(uid, timezone=self.timezone)
                 self.moving_average_scores[uid] = 0
-                self.scores = list(self.moving_average_scores.values())
+
+        # Clean up old MinerHistory entries
+        for uid in list(self.MinerHistory.keys()):
+            if uid not in new_uids:
+                bt.logging.info(f"Removing MinerHistory for inactive UID {uid}")
+                del self.MinerHistory[uid]
+
+        # Update scores list
+        self.scores = list(self.moving_average_scores.values())
+
+        bt.logging.debug(f"After sync - Available UIDs: {new_uids}")
+        bt.logging.debug(f"After sync - MinerHistory keys: {set(self.MinerHistory.keys())}")
+
+        # Save updated state
         self.save_state()
 
     def query_miners(self):
@@ -182,7 +217,13 @@ class weight_setter:
             if is_query_time(self.prediction_interval, self.timestamp) or query_lag >= 60 * self.prediction_interval:
                 responses, self.timestamp = self.query_miners()
                 try:
+                    bt.logging.debug(f"Processing responses for UIDs: {self.available_uids}")
+                    bt.logging.debug(f"Number of responses: {len(responses)}")
+                    for uid, response in zip(self.available_uids, responses):
+                        bt.logging.debug(f"Response from UID {uid}: {response}")
+
                     rewards = calc_rewards(self, responses=responses)
+
                     # Adjust the scores based on responses from miners and update moving average.
                     for i, value in zip(self.available_uids, rewards):
                         self.moving_average_scores[i] = (
@@ -192,7 +233,19 @@ class weight_setter:
                     if not self.config.wandb.off:
                         log_wandb(responses, rewards, self.available_uids)
                 except Exception as e:
-                    bt.logging.error(f"Failed to calculate rewards with error: {e}")
+                    import traceback
+
+                    bt.logging.error(f"Failed to calculate rewards with error: {str(e)}")
+                    bt.logging.error(f"Error type: {type(e)}")
+                    bt.logging.error("Full traceback:")
+                    bt.logging.error(traceback.format_exc())
+                    bt.logging.error(f"Available UIDs: {self.available_uids}")
+                    bt.logging.error(f"Response count: {len(responses)}")
+                    bt.logging.error(f"MinerHistory keys: {list(self.MinerHistory.keys())}")
+                    bt.logging.error(f"Full MinerHistory: {self.MinerHistory}")
+                    for uid, response in zip(self.available_uids, responses):
+                        bt.logging.error(f"UID {uid} response status: {getattr(response, 'status_code', 'unknown')}")
+                        bt.logging.error(f"UID {uid} response type: {type(response)}")
             else:
                 print_info(self)
 
