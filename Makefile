@@ -11,7 +11,6 @@ else ifeq ($(NETWORK),testnet)
    netuid = 256
 else ifeq ($(NETWORK),finney)
    netuid = 55
-   $(error Finney network not supported yet)
 endif
 
 metagraph:
