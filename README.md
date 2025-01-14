@@ -109,7 +109,7 @@ Copy the example `.env` files and edit all desired values. If you are running a 
 ```
 cp .env.validator.example .env.validator
 ```
-Edit `.env.validator` with your desired values. 
+Edit `.env.validator` with your desired values.
 
 ```
 # Network Configuration
@@ -146,7 +146,7 @@ MINER_HOTKEY=your_miner_hotkey
 # Node Configuration
 MINER_NAME=miner
 # This port must be open to accept incoming TCP connections.
-MINER_PORT=8092 
+MINER_PORT=8092
 
 # Miner Settings
 TIMEOUT=16

@@ -114,7 +114,7 @@ class weight_setter:
                 replaced_miner = self.hotkeys[uid] != hotkey
             else:
                 replaced_miner = False
-                
+
             if new_miner or replaced_miner:
                 bt.logging.info(f"Replacing hotkey on {uid} with {self.metagraph.hotkeys[uid]}")
                 self.moving_average_scores[uid] = 0
@@ -123,7 +123,7 @@ class weight_setter:
 
         # Update hotkeys dictionary
         self.hotkeys = {uid: value for uid, value in enumerate(self.metagraph.hotkeys)}
-        
+
         # Ensure all available UIDs have MinerHistory entries
         for uid in self.available_uids:
             if uid not in self.MinerHistory:
@@ -140,17 +140,9 @@ class weight_setter:
         # Update scores list
         self.scores = list(self.moving_average_scores.values())
 
-        # Log changes
-        added_uids = new_uids - old_uids
-        removed_uids = old_uids - new_uids
-        if added_uids:
-            bt.logging.info(f"Added UIDs: {added_uids}")
-        if removed_uids:
-            bt.logging.info(f"Removed UIDs: {removed_uids}")
-        
         bt.logging.debug(f"After sync - Available UIDs: {new_uids}")
         bt.logging.debug(f"After sync - MinerHistory keys: {set(self.MinerHistory.keys())}")
-        
+
         # Save updated state
         self.save_state()
 
@@ -229,7 +221,7 @@ class weight_setter:
                     bt.logging.debug(f"Number of responses: {len(responses)}")
                     for uid, response in zip(self.available_uids, responses):
                         bt.logging.debug(f"Response from UID {uid}: {response}")
-                    
+
                     rewards = calc_rewards(self, responses=responses)
 
                     # Adjust the scores based on responses from miners and update moving average.
@@ -242,6 +234,7 @@ class weight_setter:
                         log_wandb(responses, rewards, self.available_uids)
                 except Exception as e:
                     import traceback
+
                     bt.logging.error(f"Failed to calculate rewards with error: {str(e)}")
                     bt.logging.error(f"Error type: {type(e)}")
                     bt.logging.error("Full traceback:")
