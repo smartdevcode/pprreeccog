@@ -3,7 +3,7 @@ export
 
 finney = wss://entrypoint-finney.opentensor.ai:443
 testnet = wss://test.finney.opentensor.ai:443
-localnet = ws://127.0.0.1:9945
+localnet = $(LOCALNET)
 
 ifeq ($(NETWORK),localnet)
    netuid = 55
@@ -11,7 +11,6 @@ else ifeq ($(NETWORK),testnet)
    netuid = 256
 else ifeq ($(NETWORK),finney)
    netuid = 55
-   $(error Finney network not supported yet)
 endif
 
 metagraph:
