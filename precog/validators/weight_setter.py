@@ -31,8 +31,6 @@ class weight_setter:
         bt.logging.info(
             f"Running validator for subnet: {self.config.netuid} on network: {self.config.subtensor.network}"
         )
-        if not hasattr(self, 'MinerHistory'):
-            self.MinerHistory = {}
         self.available_uids = asyncio.run(self.get_available_uids())
         self.hotkeys = {uid: value for uid, value in enumerate(self.metagraph.hotkeys)}
         if self.config.reset_state:
