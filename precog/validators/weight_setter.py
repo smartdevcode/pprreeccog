@@ -107,11 +107,14 @@ class weight_setter:
         self.available_uids = asyncio.run(self.get_available_uids())
         new_uids = set(self.available_uids)
 
+        # Update hotkeys dictionary
+        self.hotkeys = {uid: value for uid, value in enumerate(self.metagraph.hotkeys)}
+
         # Process hotkey changes
         for uid, hotkey in enumerate(self.metagraph.hotkeys):
             new_miner = uid in new_uids and uid not in old_uids
             if not new_miner:
-                replaced_miner = self.hotkeys[uid] != hotkey
+                replaced_miner = self.hotkeys.get(uid, '') != hotkey
             else:
                 replaced_miner = False
 
@@ -120,9 +123,6 @@ class weight_setter:
                 self.moving_average_scores[uid] = 0
                 if uid in new_uids:  # Only create history for available UIDs
                     self.MinerHistory[uid] = MinerHistory(uid, timezone=self.timezone)
-
-        # Update hotkeys dictionary
-        self.hotkeys = {uid: value for uid, value in enumerate(self.metagraph.hotkeys)}
 
         # Ensure all available UIDs have MinerHistory entries
         for uid in self.available_uids:
