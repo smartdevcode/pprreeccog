@@ -6,7 +6,7 @@ testnet = wss://test.finney.opentensor.ai:443
 localnet = ws://127.0.0.1:9945
 
 ifeq ($(NETWORK),localnet)
-   netuid = 1
+   netuid = 55
 else ifeq ($(NETWORK),testnet)
    netuid = 256
 else ifeq ($(NETWORK),finney)
