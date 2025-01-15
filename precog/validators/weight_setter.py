@@ -104,7 +104,7 @@ class weight_setter:
         bt.logging.debug(f"Before sync - MinerHistory keys: {old_history}")
 
         # Update available UIDs
-        self.available_uids = asyncio.run(self.get_available_uids())
+        self.available_uids = await self.get_available_uids()
         new_uids = set(self.available_uids)
 
         # Update hotkeys dictionary
