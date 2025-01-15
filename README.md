@@ -114,7 +114,7 @@ Edit `.env.validator` with your desired values.
 ```
 # Network Configuration
 # Options: localnet, testnet, finney
-NETWORK=testnet
+NETWORK=finney
 
 # Wallet Configuration
 COLDKEY=your_validator_coldkey
@@ -127,6 +127,10 @@ VALIDATOR_PORT=8091
 # Logging
 # Options: info, debug, trace
 LOGGING_LEVEL=debug
+
+# Local Subtensor Configuration
+# Only used if you run your own subtensor node
+LOCALNET=ws://127.0.0.1:9945
 ```
 
 #### .env.miner
@@ -137,7 +141,7 @@ Edit `.env.miner` with your desired values.
 
 ```# Network Configuration
 # Options: localnet, testnet, finney
-NETWORK=testnet
+NETWORK=finney
 
 # Wallet Configuration
 COLDKEY=your_miner_coldkey
@@ -158,6 +162,10 @@ FORWARD_FUNCTION=base_miner
 # Logging
 # Options: info, debug, trace
 LOGGING_LEVEL=debug
+
+# Local Subtensor Configuration
+# Only used if you run your own subtensor node
+LOCALNET=ws://127.0.0.1:9945
 ```
 
 ---

@@ -1,6 +1,12 @@
 Release Notes
 =============
 
+1.0.1
+-----
+Released on January 15th 2025
+- Update to support finney network
+- Add support for running local subtensor node
+
 1.0.0
 -----
 Released on January 14th 2025
