@@ -1,5 +1,9 @@
 Release Notes
 =============
+1.0.2
+-----
+Released on January 16th 2025
+- Ensure metagraph is properly synced when new miners join the network
 
 1.0.1
 -----
