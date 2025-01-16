@@ -32,6 +32,7 @@ class Miner:
         )
         self.current_block = func_with_retry(self.subtensor.get_current_block)
         self.current_prediction = [datetime.now(timezone("America/New_York")), [0]]
+        self.resync_metagraph_rate = 600
         self.loop = asyncio.get_event_loop()
         self.lock = asyncio.Lock()
         self.stop_event = asyncio.Event()
