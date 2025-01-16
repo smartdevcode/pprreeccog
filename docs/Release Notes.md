@@ -1,5 +1,10 @@
 Release Notes
 =============
+1.0.3
+-----
+Released on January 16th 2025
+- Ensure metagraph is properly synced when new validators join the network.
+
 1.0.2
 -----
 Released on January 16th 2025
