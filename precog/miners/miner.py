@@ -1,17 +1,16 @@
 import argparse
 import asyncio
 import importlib
-import time
 import typing
 from datetime import datetime
 
 import bittensor as bt
 from pytz import timezone
-from substrateinterface import Keypair, SubstrateInterface
 
 from precog.protocol import Challenge
 from precog.utils.bittensor import print_info, setup_bittensor_objects
 from precog.utils.config import config
+from precog.utils.general import func_with_retry, loop_handler
 
 
 class Miner:
@@ -30,13 +29,15 @@ class Miner:
             forward_fn=self.forward,
             blacklist_fn=self.blacklist,
             priority_fn=self.priority,
-            # verify_fn=self.verify,
         )
-        self.nonces = {}
-        self.current_block = self.node_query("System", "Number", [])
+        self.current_block = func_with_retry(self.subtensor.get_current_block)
         self.current_prediction = [datetime.now(timezone("America/New_York")), [0]]
         self.loop = asyncio.get_event_loop()
+        self.lock = asyncio.Lock()
+        self.stop_event = asyncio.Event()
         self.loop.create_task(self.run())
+        self.loop.create_task(loop_handler(self, self.resync_metagraph, sleep_time=self.resync_metagraph_rate))
+        self.loop.run_forever()
 
     async def run(self):
         bt.logging.info(
@@ -52,6 +53,13 @@ class Miner:
                 bt.logging.info("Keyboard interrupt detected, shutting down miner.")
                 self.axon.stop()
                 break
+
+    async def resync_metagraph(self):
+        self.subtensor = bt.subtensor(config=self.config, network=self.config.subtensor.chain_endpoint)
+        bt.logging.info("Syncing Metagraph...")
+        self.metagraph.sync(subtensor=self.subtensor)
+        bt.logging.info("Metagraph updated, re-syncing hotkeys, dendrite pool and moving averages")
+        self.current_block = func_with_retry(self.subtensor.get_current_block)
 
     async def forward(self, synapse: Challenge) -> Challenge:
         synapse = self.forward_module.forward(synapse)
@@ -147,69 +155,6 @@ class Miner:
         priority = float(self.metagraph.S[caller_uid])  # Return the stake as the priority.
         bt.logging.trace(f"Prioritizing {synapse.dendrite.hotkey} with value: {priority}")
         return priority
-
-    async def verify(self, synapse: Challenge) -> None:
-        # needs to replace the base miner verify logic
-        bt.logging.debug(f"checking nonce: {synapse.dendrite}")
-        # Build the keypair from the dendrite_hotkey
-        if synapse.dendrite is not None:
-            keypair = Keypair(ss58_address=synapse.dendrite.hotkey)
-            # Build the signature messages.
-            message = f"{synapse.dendrite.nonce}.{synapse.dendrite.hotkey}.{self.wallet.hotkey.ss58_address}.{synapse.dendrite.uuid}.{synapse.computed_body_hash}"
-            # Build the unique endpoint key.
-            endpoint_key = f"{synapse.dendrite.hotkey}:{synapse.dendrite.uuid}"
-            # Requests must have nonces to be safe from replays
-            if synapse.dendrite.nonce is None:
-                raise Exception("Missing Nonce")
-            if synapse.dendrite.version is not None:
-                bt.logging.debug("Using custom synapse verification logic")
-                # If we don't have a nonce stored, ensure that the nonce falls within
-                # a reasonable delta.
-                cur_time = time.time_ns()
-
-                allowed_delta = self.config.timeout * 1_000_000_000  # nanoseconds
-
-                latest_allowed_nonce = synapse.dendrite.nonce + allowed_delta
-                bt.logging.debug(f"delta: {self._to_seconds(cur_time - synapse.dendrite.nonce)}")
-
-                if self.nonces.get(endpoint_key) is None and synapse.dendrite.nonce > latest_allowed_nonce:
-                    raise Exception(
-                        f"Nonce is too old. Allowed delta in seconds: {self._to_seconds(allowed_delta)}, got delta: {self._to_seconds(cur_time - synapse.dendrite.nonce)}"
-                    )
-                if self.nonces.get(endpoint_key) is not None and synapse.dendrite.nonce <= self.nonces[endpoint_key]:
-                    raise Exception(
-                        f"Nonce is too small, already have a newer nonce in the nonce store, got: {synapse.dendrite.nonce}, already have: {self.nonces[endpoint_key]}"
-                    )
-            else:
-                bt.logging.warning(f"Using synapse verification logic for version < 7.2.0: {synapse.dendrite.version}")
-                if (
-                    endpoint_key in self.nonces.keys()
-                    and self.nonces[endpoint_key] is not None
-                    and synapse.dendrite.nonce <= self.nonces[endpoint_key]
-                ):
-                    raise Exception(
-                        f"Nonce is too small, already have a newer nonce in the nonce store, got: {synapse.dendrite.nonce}, already have: {self.nonces[endpoint_key]}"
-                    )
-
-            if not keypair.verify(message, synapse.dendrite.signature):
-                raise Exception(
-                    f"Signature mismatch with {message} and {synapse.dendrite.signature}, from hotkey {synapse.dendrite.hotkey}"
-                )
-
-            # Success
-            self.nonces[endpoint_key] = synapse.dendrite.nonce  # type: ignore
-
-    def node_query(self, module, method, params):
-        try:
-            result = self.node.query(module, method, params).value
-        except Exception:
-            # reinitilize node
-            self.node = SubstrateInterface(url=self.subtensor.chain_endpoint)
-            result = self.node.query(module, method, params).value
-        return result
-
-    def _to_seconds(self, nano: int) -> int:
-        return nano / 1_000_000_000
 
 
 # Run the miner
