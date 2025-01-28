@@ -1,10 +1,10 @@
+import datetime
 import os
 
 import bittensor as bt
-from precog import constants
 import wandb
 
-from precog import __version__
+from precog import __version__, constants
 
 
 def setup_wandb(self) -> None:
@@ -27,6 +27,7 @@ def setup_wandb(self) -> None:
 
 def log_wandb(responses, rewards, miner_uids):
     wandb_val_log = {
+        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "miners_info": {
             miner_uid: {
                 "miner_prediction": response.prediction,
@@ -34,6 +35,6 @@ def log_wandb(responses, rewards, miner_uids):
                 "miner_reward": reward,
             }
             for miner_uid, response, reward in zip(miner_uids, responses, rewards.tolist())
-        }
+        },
     }
     wandb.log(wandb_val_log)
