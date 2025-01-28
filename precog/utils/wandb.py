@@ -26,8 +26,10 @@ def setup_wandb(self) -> None:
 
 
 def log_wandb(responses, rewards, miner_uids):
+    current_time = datetime.datetime.now(datetime.timezone.utc)
     wandb_val_log = {
-        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "timestamp": current_time.timestamp(),
+        "timestamp_iso": current_time.isoformat(),
         "miners_info": {
             miner_uid: {
                 "miner_prediction": response.prediction,
