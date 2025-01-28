@@ -1,4 +1,3 @@
-import datetime
 import os
 
 import bittensor as bt
@@ -26,14 +25,15 @@ def setup_wandb(self) -> None:
 
 
 def log_wandb(responses, rewards, miner_uids):
-    current_time = datetime.datetime.now(datetime.timezone.utc)
     wandb_val_log = {
         "miners_info": {
-            "timestamp": current_time.isoformat(),
             **{
                 miner_uid: {
-                    "miner_prediction": response.prediction,
-                    "miner_interval": response.interval,
+                    # Convert predictions array to a dict with named dimensions
+                    **{f"miner_prediction_{i}": pred_val for i, pred_val in enumerate(response.prediction)},
+                    # Convert interval array to lower/upper bounds
+                    "interval_lower": response.interval[0],
+                    "interval_upper": response.interval[1],
                     "miner_reward": reward,
                 }
                 for miner_uid, response, reward in zip(miner_uids, responses, rewards.tolist())
