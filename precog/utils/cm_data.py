@@ -88,7 +88,7 @@ class CMData:
 
         # Remove data older than 24 hours from latest point
         cutoff_time = end_time - pd.Timedelta(days=1)
-        self._cache = self._cache[self._cache["time"] >= cutoff_time]
+        self._cache = self._cache[self._cache["time"] >= cutoff_time].reset_index(drop=True)
 
         # Filter data for requested time range
         if start:
