@@ -29,11 +29,16 @@ def log_wandb(responses, rewards, miner_uids):
         "miners_info": {
             **{
                 miner_uid: {
-                    # Convert predictions array to a dict with named dimensions
-                    **{f"miner_prediction_{i}": pred_val for i, pred_val in enumerate(response.prediction)},
-                    # Convert interval array to lower/upper bounds
-                    "interval_lower": response.interval[0],
-                    "interval_upper": response.interval[1],
+                    # Use 0 as default for predictions
+                    **{
+                        f"miner_prediction_{i}": pred_val
+                        for i, pred_val in enumerate(
+                            response.prediction if response.prediction is not None else [0] * 6
+                        )
+                    },
+                    # Use 0 as default for interval bounds
+                    "interval_lower": response.interval[0] if response.interval is not None else 0,
+                    "interval_upper": response.interval[1] if response.interval is not None else 0,
                     "miner_reward": reward,
                 }
                 for miner_uid, response, reward in zip(miner_uids, responses, rewards.tolist())
