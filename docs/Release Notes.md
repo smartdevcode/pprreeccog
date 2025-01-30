@@ -1,5 +1,12 @@
 Release Notes
 =============
+1.0.4
+-----
+Released on February 3rd 2025
+- Add wandb logging
+- Add API cache for 24 hours of data to speed up base miner responses
+- Implement dendrite.forward to improve validator performance
+
 1.0.3
 -----
 Released on January 16th 2025
