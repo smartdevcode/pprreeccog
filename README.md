@@ -102,8 +102,18 @@ poetry install
 ---
 ## Configuration
 
+
 ### .env Files
 Copy the example `.env` files and edit all desired values. If you are running a validator, you will only need to copy the .env.validator file. If you are running a miner, you will only need to copy the .env.miner file:
+
+#### Obtain & Setup WandB API Key (Validators Only)
+Before starting the process, validators would be required to procure a WANDB API Key. Please follow the instructions mentioned below:<br>
+
+- Log in to <a href="https://wandb.ai">Weights & Biases</a> and generate an API key in your account settings.
+- Set the variable `WANDB_API_KEY` in the `.env.validator` file.
+- Finally, run `wandb login` and paste your API key. Now you're all set with weights & biases.
+
+For help finding your wandb api key, look <a href="https://docs.wandb.ai/support/find_api_key/">here</a>
 
 #### .env.validator
 ```
@@ -131,6 +141,9 @@ LOGGING_LEVEL=debug
 # Local Subtensor Configuration
 # Only used if you run your own subtensor node
 LOCALNET=ws://127.0.0.1:9945
+
+#Wandb Setup
+WANDB_API_KEY=your_wandb_api_key
 ```
 
 #### .env.miner
