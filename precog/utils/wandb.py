@@ -14,6 +14,8 @@ def setup_wandb(self) -> None:
             entity=constants.WANDB_PROJECT,
             config={
                 "hotkey": self.wallet.hotkey.ss58_address,
+                "uid": self.my_uid,
+                "subnet_version": __version__,
             },
             name=f"validator-{self.my_uid}-{__version__}",
             resume="auto",
