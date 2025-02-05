@@ -216,7 +216,7 @@ make validator ENV_FILE=.env.validator
 
 
 ## Incentive Mechanism
-Read the [Incentive mechanism whitepaper](https://github.com/coinmetrics/precog/tree/master/docs/precog_Incentive_mechanism.pdf) for an in-depth explanation of the mechanism.
+Please see the [Incentive mechanism Documentation](https://github.com/coinmetrics/precog/tree/master/docs/precog_Incentive_mechanism.pdf) on the Coin Metrics docs site for an in-depth explanation of the mechanism.  These describe the process for evaluating each forecast type's performance and ranking Mines on that basis, including examples to grok the Interval Forecast.
 
 Briefly, miners are rewarded based on two factors:
 1. A point estimate for the price of BTC in USD one hour from prediction time
