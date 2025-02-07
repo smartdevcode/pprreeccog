@@ -1,13 +1,9 @@
 import argparse
 import asyncio
-import logging
 from pathlib import Path
 
-logging.getLogger("bittensor").propagate = False
-logging.getLogger("urllib3").setLevel(logging.WARNING)
-
-from precog.utils.config import config  # noqa: E402
-from precog.validators.weight_setter import weight_setter  # noqa: E402
+from precog.utils.config import config
+from precog.validators.weight_setter import weight_setter
 
 
 class Validator:
@@ -20,24 +16,23 @@ class Validator:
         self.config.full_path = str(full_path)
 
     async def main(self):
-        loop = asyncio.get_event_loop()
-        self.weight_setter = await weight_setter.create(config=self.config, loop=loop)
-        # Add task manager
+        self.weight_setter = await weight_setter.create(config=self.config)
         try:
             while True:
                 await asyncio.sleep(1)
         except asyncio.CancelledError:
-            # Clean shutdown
+            # Clean shutdown all tasks
+            for task in asyncio.all_tasks():
+                task.cancel()
+            await asyncio.gather(*asyncio.all_tasks(), return_exceptions=True)
             return
 
-    async def reset_instance(self):
-        self.__init__()
-        asyncio.run(self.main())
 
-
-# Run the validator.
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     config = config(parser, neuron_type="validator")
     validator = Validator(config)
-    asyncio.run(validator.main())
+    try:
+        asyncio.run(validator.main())
+    except KeyboardInterrupt:
+        pass
