@@ -16,7 +16,8 @@ class Validator:
         self.config.full_path = str(full_path)
 
     async def main(self):
-        self.weight_setter = await weight_setter.create(config=self.config)
+        loop = asyncio.get_event_loop()
+        self.weight_setter = await weight_setter.create(config=self.config, loop=loop)
         try:
             while True:
                 await asyncio.sleep(1)

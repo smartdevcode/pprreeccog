@@ -28,7 +28,7 @@ class weight_setter:
         await self.initialize()
         return self
 
-    async def initialize(self, config=None, loop=None):
+    async def initialize(self):
         setup_bittensor_objects(self)
         self.timezone = timezone("UTC")
         self.prediction_interval = self.config.prediction_interval  # in seconds
