@@ -1,30 +1,7 @@
 import logging
-import time
 from pathlib import Path
 
 import bittensor as bt
-import websockets
-
-
-def initialize_subtensor(self):
-    MAX_RETRIES = 3
-    BACKOFF_TIME = 2
-
-    for attempt in range(MAX_RETRIES):
-        try:
-            # Initialize subtensor.
-            self.subtensor = bt.subtensor(config=self.config, network=self.config.subtensor.chain_endpoint)
-            self.metagraph = self.subtensor.metagraph(self.config.netuid)
-            self.wallet = bt.wallet(config=self.config)
-            self.dendrite = bt.dendrite(wallet=self.wallet)
-            self.axon = bt.axon(wallet=self.wallet, config=self.config, port=self.config.axon.port)
-            break
-        except websockets.exceptions.InvalidStatus:
-            if attempt == MAX_RETRIES - 1:
-                raise
-            wait_time = BACKOFF_TIME**attempt
-            bt.logging.info(f"Rate limited, retrying in {wait_time}s...")
-            time.sleep(wait_time)
 
 
 def setup_bittensor_objects(self):
@@ -52,7 +29,11 @@ def setup_bittensor_objects(self):
         else:
             self.config.subtensor.network = self.config.subtensor.chain_endpoint
 
-    initialize_subtensor(self)
+    self.subtensor = bt.subtensor(config=self.config, network=self.config.subtensor.chain_endpoint)
+    self.metagraph = self.subtensor.metagraph(self.config.netuid)
+    self.wallet = bt.wallet(config=self.config)
+    self.dendrite = bt.dendrite(wallet=self.wallet)
+    self.axon = bt.axon(wallet=self.wallet, config=self.config, port=self.config.axon.port)
 
     # Connect the validator to the network.
     if self.wallet.hotkey.ss58_address not in self.metagraph.hotkeys:
