@@ -1,10 +1,10 @@
+import logging
 from pathlib import Path
 
 import bittensor as bt
 
 
 def setup_bittensor_objects(self):
-    print("setup_bittensor_objects called")
     if self.config.logging.level == "trace":
         bt.logging.set_trace()
     elif self.config.logging.level == "debug":
@@ -13,6 +13,9 @@ def setup_bittensor_objects(self):
         # set to info by default
         pass
     bt.logging.info(f"Set logging level to {self.config.logging.level}")
+
+    for handler in logging.root.handlers[:]:
+        logging.root.removeHandler(handler)
 
     # if chain enpoint isn't set, use the network arg
     if self.config.subtensor.chain_endpoint is None:
