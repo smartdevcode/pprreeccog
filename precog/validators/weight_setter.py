@@ -3,7 +3,6 @@ import os
 import pickle
 
 import bittensor as bt
-import websocket
 from numpy import array
 from pytz import timezone
 
@@ -61,16 +60,6 @@ class weight_setter:
         )
         self.loop.create_task(loop_handler(self, self.resync_metagraph, sleep_time=self.resync_metagraph_rate))
         self.loop.create_task(loop_handler(self, self.set_weights, sleep_time=self.hyperparameters.weights_rate_limit))
-        try:
-            self.loop.run_forever()
-        except websocket._exceptions.WebSocketConnectionClosedException:
-            # TODO: Exceptions are not being caught in this loop
-            bt.logging.info("Caught websocket connection closed exception")
-            self.__reset_instance__()
-        except Exception as e:
-            bt.logging.error(f"Error on loop: {e}")
-        finally:
-            self.__exit__(None, None, None)
 
     def __exit__(self, exc_type, exc_value, traceback):
         self.save_state()
