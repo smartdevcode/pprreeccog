@@ -18,10 +18,18 @@ from precog.validators.reward import calc_rewards
 
 
 class weight_setter:
-    async def __init__(self, config=None, loop=None):
+    def __init__(self, config=None, loop=None):
         self.config = config
         self.loop = loop
         self.lock = asyncio.Lock()
+
+    @classmethod
+    async def create(cls, config=None, loop=None):
+        self = cls(config, loop)
+        await self.initialize()
+        return self
+
+    async def initialize(self, config=None, loop=None):
         setup_bittensor_objects(self)
         self.timezone = timezone("UTC")
         self.prediction_interval = self.config.prediction_interval  # in seconds

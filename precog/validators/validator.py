@@ -17,7 +17,7 @@ class Validator:
 
     async def main(self):
         loop = asyncio.get_event_loop()
-        self.weight_setter = weight_setter(config=self.config, loop=loop)
+        self.weight_setter = await weight_setter.create(config=self.config, loop=loop)
 
     async def reset_instance(self):
         self.__init__()
