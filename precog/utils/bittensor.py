@@ -5,6 +5,7 @@ import bittensor as bt
 
 
 def setup_bittensor_objects(self):
+    logging.getLogger("bittensor").propagate = False
     if self.config.logging.level == "trace":
         bt.logging.set_trace()
     elif self.config.logging.level == "debug":
@@ -13,9 +14,6 @@ def setup_bittensor_objects(self):
         # set to info by default
         pass
     bt.logging.info(f"Set logging level to {self.config.logging.level}")
-
-    for handler in logging.root.handlers[:]:
-        print("Handler: ", handler)
 
     # if chain enpoint isn't set, use the network arg
     if self.config.subtensor.chain_endpoint is None:
