@@ -1,11 +1,10 @@
-import logging
 from pathlib import Path
 
 import bittensor as bt
 
 
 def setup_bittensor_objects(self):
-    logging.getLogger().handlers = []
+    print("setup_bittensor_objects called")
     if self.config.logging.level == "trace":
         bt.logging.set_trace()
     elif self.config.logging.level == "debug":
