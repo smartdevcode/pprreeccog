@@ -15,7 +15,7 @@ def setup_bittensor_objects(self):
     bt.logging.info(f"Set logging level to {self.config.logging.level}")
 
     for handler in logging.root.handlers[:]:
-        logging.root.removeHandler(handler)
+        print("Handler: ", handler)
 
     # if chain enpoint isn't set, use the network arg
     if self.config.subtensor.chain_endpoint is None:
