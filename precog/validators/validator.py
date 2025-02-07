@@ -1,9 +1,13 @@
 import argparse
 import asyncio
+import logging
 from pathlib import Path
 
-from precog.utils.config import config
-from precog.validators.weight_setter import weight_setter
+logging.getLogger("bittensor").propagate = False
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+
+from precog.utils.config import config  # noqa: E402
+from precog.validators.weight_setter import weight_setter  # noqa: E402
 
 
 class Validator:

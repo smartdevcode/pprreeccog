@@ -1,11 +1,9 @@
-import logging
 from pathlib import Path
 
 import bittensor as bt
 
 
 def setup_bittensor_objects(self):
-    logging.getLogger("bittensor").propagate = False
     if self.config.logging.level == "trace":
         bt.logging.set_trace()
     elif self.config.logging.level == "debug":
