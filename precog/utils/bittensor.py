@@ -1,3 +1,4 @@
+import logging
 import time
 from pathlib import Path
 
@@ -27,6 +28,7 @@ def initialize_subtensor(self):
 
 
 def setup_bittensor_objects(self):
+    logging.getLogger().handlers = []
     if self.config.logging.level == "trace":
         bt.logging.set_trace()
     elif self.config.logging.level == "debug":
