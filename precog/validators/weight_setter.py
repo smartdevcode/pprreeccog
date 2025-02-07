@@ -18,7 +18,7 @@ from precog.validators.reward import calc_rewards
 
 
 class weight_setter:
-    def __init__(self, config=None, loop=None):
+    async def __init__(self, config=None, loop=None):
         self.config = config
         self.loop = loop
         self.lock = asyncio.Lock()
@@ -31,7 +31,7 @@ class weight_setter:
         bt.logging.info(
             f"Running validator for subnet: {self.config.netuid} on network: {self.config.subtensor.network}"
         )
-        self.available_uids = asyncio.run(self.get_available_uids())
+        self.available_uids = await self.get_available_uids()
         self.hotkeys = {uid: value for uid, value in enumerate(self.metagraph.hotkeys)}
         if self.config.reset_state:
             self.scores = [0.0] * len(self.metagraph.S)
