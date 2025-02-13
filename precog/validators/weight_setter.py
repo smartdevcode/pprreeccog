@@ -3,7 +3,6 @@ import os
 import pickle
 
 import bittensor as bt
-import websocket
 from numpy import array
 from pytz import timezone
 
@@ -22,6 +21,14 @@ class weight_setter:
         self.config = config
         self.loop = loop
         self.lock = asyncio.Lock()
+
+    @classmethod
+    async def create(cls, config=None, loop=None):
+        self = cls(config, loop)
+        await self.initialize()
+        return self
+
+    async def initialize(self):
         setup_bittensor_objects(self)
         self.timezone = timezone("UTC")
         self.prediction_interval = self.config.prediction_interval  # in seconds
@@ -31,7 +38,7 @@ class weight_setter:
         bt.logging.info(
             f"Running validator for subnet: {self.config.netuid} on network: {self.config.subtensor.network}"
         )
-        self.available_uids = asyncio.run(self.get_available_uids())
+        self.available_uids = await self.get_available_uids()
         self.hotkeys = {uid: value for uid, value in enumerate(self.metagraph.hotkeys)}
         if self.config.reset_state:
             self.scores = [0.0] * len(self.metagraph.S)
@@ -53,16 +60,6 @@ class weight_setter:
         )
         self.loop.create_task(loop_handler(self, self.resync_metagraph, sleep_time=self.resync_metagraph_rate))
         self.loop.create_task(loop_handler(self, self.set_weights, sleep_time=self.hyperparameters.weights_rate_limit))
-        try:
-            self.loop.run_forever()
-        except websocket._exceptions.WebSocketConnectionClosedException:
-            # TODO: Exceptions are not being caught in this loop
-            bt.logging.info("Caught websocket connection closed exception")
-            self.__reset_instance__()
-        except Exception as e:
-            bt.logging.error(f"Error on loop: {e}")
-        finally:
-            self.__exit__(None, None, None)
 
     def __exit__(self, exc_type, exc_value, traceback):
         self.save_state()
@@ -232,7 +229,7 @@ class weight_setter:
                         ) * self.moving_average_scores[i] + self.config.neuron.moving_average_alpha * value
                         self.scores = list(self.moving_average_scores.values())
                     if not self.config.wandb.off:
-                        log_wandb(responses, rewards, self.available_uids)
+                        log_wandb(responses, rewards, self.available_uids, self.hotkeys)
                 except Exception as e:
                     import traceback
 

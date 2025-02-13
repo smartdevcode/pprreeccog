@@ -1,5 +1,13 @@
 Release Notes
 =============
+
+2.0.0
+-----
+Released on February 13th 2025
+- Upgrade to bittensor v9.0.0
+- Upgrade to bittensor-cli v9.0.0
+- Make minimal changes to support dTAO logic
+
 1.0.4
 -----
 Released on February 3rd 2025
