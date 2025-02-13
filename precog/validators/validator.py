@@ -17,16 +17,23 @@ class Validator:
 
     async def main(self):
         loop = asyncio.get_event_loop()
-        self.weight_setter = weight_setter(config=self.config, loop=loop)
+        self.weight_setter = await weight_setter.create(config=self.config, loop=loop)
+        try:
+            while True:
+                await asyncio.sleep(1)
+        except asyncio.CancelledError:
+            # Clean shutdown all tasks
+            for task in asyncio.all_tasks():
+                task.cancel()
+            await asyncio.gather(*asyncio.all_tasks(), return_exceptions=True)
+            return
 
-    async def reset_instance(self):
-        self.__init__()
-        asyncio.run(self.main())
 
-
-# Run the validator.
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     config = config(parser, neuron_type="validator")
     validator = Validator(config)
-    asyncio.run(validator.main())
+    try:
+        asyncio.run(validator.main())
+    except KeyboardInterrupt:
+        pass

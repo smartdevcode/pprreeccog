@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Optional
 
 import bittensor as bt
 
@@ -26,7 +27,7 @@ def setup_bittensor_objects(self):
             self.config.subtensor.network = "finney"
         else:
             self.config.subtensor.network = self.config.subtensor.chain_endpoint
-    # Initialize subtensor.
+
     self.subtensor = bt.subtensor(config=self.config, network=self.config.subtensor.chain_endpoint)
     self.metagraph = self.subtensor.metagraph(self.config.netuid)
     self.wallet = bt.wallet(config=self.config)
@@ -82,7 +83,9 @@ def print_info(self) -> None:
     bt.logging.info(log)
 
 
-def check_uid_availability(metagraph: "bt.metagraph.Metagraph", uid: int, vpermit_tao_limit: int) -> bool:
+def check_uid_availability(
+    metagraph: "bt.metagraph.Metagraph", uid: int, vpermit_tao_limit: Optional[int] = None
+) -> bool:
     """Check if uid is available. The UID should be available if it is serving and has less than vpermit_tao_limit stake
     Args:
         metagraph (:obj: bt.metagraph.Metagraph): Metagraph object
@@ -94,9 +97,12 @@ def check_uid_availability(metagraph: "bt.metagraph.Metagraph", uid: int, vpermi
     # Filter non serving axons.
     if not metagraph.axons[uid].is_serving:
         return False
+
+    # Temporarily remove filter while we navigate correct dTAO logic
     # Filter validator permit > 1024 stake.
-    if metagraph.validator_permit[uid]:
-        if metagraph.S[uid] > vpermit_tao_limit:
-            return False
+    # if metagraph.validator_permit[uid]:
+    #     if metagraph.S[uid] > vpermit_tao_limit:
+    #         return False
+
     # Available otherwise.
     return True

@@ -14,6 +14,8 @@ def setup_wandb(self) -> None:
             entity=constants.WANDB_PROJECT,
             config={
                 "hotkey": self.wallet.hotkey.ss58_address,
+                "uid": self.my_uid,
+                "subnet_version": __version__,
             },
             name=f"validator-{self.my_uid}-{__version__}",
             resume="auto",
@@ -24,11 +26,12 @@ def setup_wandb(self) -> None:
         bt.logging.error("WANDB_API_KEY not found in environment variables.")
 
 
-def log_wandb(responses, rewards, miner_uids):
+def log_wandb(responses, rewards, miner_uids, hotkeys):
     try:
         wandb_val_log = {
             "miners_info": {
                 miner_uid: {
+                    "miner_hotkey": hotkeys[miner_uid],
                     "miner_point_prediction": response.prediction,
                     "miner_interval_prediction": response.interval,
                     "miner_reward": reward,
