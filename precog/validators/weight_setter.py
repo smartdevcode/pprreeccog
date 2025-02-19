@@ -261,34 +261,33 @@ class weight_setter:
             pickle.dump(state, f)
         bt.logging.info(f"Saved {self.config.neuron.name} state.")
 
+    def load_state(self) -> None:
+        """Initialize or load the current state of the validator from a file."""
 
-def load_state(self) -> None:
-    """Initialize or load the current state of the validator from a file."""
+        state_path = os.path.join(self.config.full_path, "state.pt")
 
-    state_path = os.path.join(self.config.full_path, "state.pt")
+        bt.logging.info("Loading validator state.")
+        bt.logging.info(f"State path: {state_path}")
 
-    bt.logging.info("Loading validator state.")
-    bt.logging.info(f"State path: {state_path}")
+        # Attempt to load validator state
+        try:
+            with open(state_path, "rb") as f:
+                state = pickle.load(f)
 
-    # Attempt to load validator state
-    try:
-        with open(state_path, "rb") as f:
-            state = pickle.load(f)
+        # If we fail to load the state, initialize the state
+        except Exception as e:
+            bt.logging.error(f"Failed to load state with error: {e}")
 
-    # If we fail to load the state, initialize the state
-    except Exception as e:
-        bt.logging.error(f"Failed to load state with error: {e}")
+            self.scores = [0.0] * len(self.metagraph.S)
+            self.moving_average_scores = {uid: 0 for uid in self.metagraph.uids}
+            self.MinerHistory = {uid: MinerHistory(uid, timezone=self.timezone) for uid in range(len(self.metagraph.S))}
 
-        self.scores = [0.0] * len(self.metagraph.S)
-        self.moving_average_scores = {uid: 0 for uid in self.metagraph.uids}
-        self.MinerHistory = {uid: MinerHistory(uid, timezone=self.timezone) for uid in range(len(self.metagraph.S))}
+        # If we successfully loaded the file, then load the state
+        else:
+            self.scores = state["scores"]
+            self.MinerHistory = state["MinerHistory"]
+            self.moving_average_scores = state["moving_average_scores"]
 
-    # If we successfully loaded the file, then load the state
-    else:
-        self.scores = state["scores"]
-        self.MinerHistory = state["MinerHistory"]
-        self.moving_average_scores = state["moving_average_scores"]
-
-    # Regardless log this text
-    finally:
-        bt.logging.info("State has been created successfully")
+        # Regardless log this text
+        finally:
+            bt.logging.info("State has been created successfully")
