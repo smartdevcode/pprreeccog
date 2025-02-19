@@ -59,13 +59,9 @@ def get_posix() -> float:
 
 def get_str() -> str:
     """
-    Get the current timestamp as a string
-
-    Returns:
-        str: The current time as an ISO 8601 string, rounded to the nearest interval
+    Get the current timestamp as a string, convenient for requests
     """
-    current_time = get_now()
-    return to_str(current_time)
+    return to_str(get_now())
 
 
 ###############################
