@@ -11,7 +11,15 @@ from precog.protocol import Challenge
 from precog.utils.bittensor import check_uid_availability, print_info, setup_bittensor_objects
 from precog.utils.classes import MinerHistory
 from precog.utils.general import func_with_retry, loop_handler
-from precog.utils.timestamp import elapsed_seconds, get_before, get_now, get_str, is_query_time, to_datetime, to_str
+from precog.utils.timestamp import (
+    elapsed_seconds,
+    get_before,
+    get_now,
+    is_query_time,
+    round_to_interval,
+    to_datetime,
+    to_str,
+)
 from precog.utils.wandb import log_wandb, setup_wandb
 from precog.validators.reward import calc_rewards
 
@@ -144,7 +152,7 @@ class weight_setter:
         self.save_state()
 
     async def query_miners(self):
-        timestamp = get_str()
+        timestamp = to_str(round_to_interval(get_now(), interval_minutes=5))
         synapse = Challenge(timestamp=timestamp)
         responses = await self.dendrite.forward(
             # Send the query to selected miner axons in the network.
@@ -253,26 +261,34 @@ class weight_setter:
             pickle.dump(state, f)
         bt.logging.info(f"Saved {self.config.neuron.name} state.")
 
-    def load_state(self):
-        """Loads the state of the validator from a file."""
-        bt.logging.info("Loading validator state.")
-        state_path = os.path.join(self.config.full_path, "state.pt")
-        bt.logging.info(f"State path: {state_path}")
-        if not os.path.exists(state_path):
-            bt.logging.info("Skipping state load due to missing state.pt file.")
-            self.scores = [0.0] * len(self.metagraph.S)
-            self.moving_average_scores = {uid: 0 for uid in self.metagraph.uids}
-            self.MinerHistory = {uid: MinerHistory(uid) for uid in self.available_uids}
-            return
-        try:
-            with open(state_path, "rb") as f:
-                state = pickle.load(f)
-            self.scores = state["scores"]
-            self.MinerHistory = state["MinerHistory"]
-            self.moving_average_scores = state["moving_average_scores"]
-        except Exception as e:
-            bt.logging.error(f"Failed to load state with error: {e}")
-            # Initialize default state
-            self.scores = [0.0] * len(self.metagraph.S)
-            self.moving_average_scores = {uid: 0 for uid in self.metagraph.uids}
-            self.MinerHistory = {uid: MinerHistory(uid, timezone=self.timezone) for uid in range(len(self.metagraph.S))}
+
+def load_state(self) -> None:
+    """Initialize or load the current state of the validator from a file."""
+
+    state_path = os.path.join(self.config.full_path, "state.pt")
+
+    bt.logging.info("Loading validator state.")
+    bt.logging.info(f"State path: {state_path}")
+
+    # Attempt to load validator state
+    try:
+        with open(state_path, "rb") as f:
+            state = pickle.load(f)
+
+    # If we fail to load the state, initialize the state
+    except Exception as e:
+        bt.logging.error(f"Failed to load state with error: {e}")
+
+        self.scores = [0.0] * len(self.metagraph.S)
+        self.moving_average_scores = {uid: 0 for uid in self.metagraph.uids}
+        self.MinerHistory = {uid: MinerHistory(uid, timezone=self.timezone) for uid in range(len(self.metagraph.S))}
+
+    # If we successfully loaded the file, then load the state
+    else:
+        self.scores = state["scores"]
+        self.MinerHistory = state["MinerHistory"]
+        self.moving_average_scores = state["moving_average_scores"]
+
+    # Regardless log this text
+    finally:
+        bt.logging.info("State has been created successfully")

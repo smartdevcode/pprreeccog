@@ -57,19 +57,15 @@ def get_posix() -> float:
     return to_posix(get_now())
 
 
-def get_str(interval_minutes: int = 5) -> str:
+def get_str() -> str:
     """
-    Get the current timestamp as a string, rounded to the nearest interval
-
-    Args:
-        interval_minutes (int): The interval in minutes to round to. Defaults to 5.
+    Get the current timestamp as a string
 
     Returns:
         str: The current time as an ISO 8601 string, rounded to the nearest interval
     """
     current_time = get_now()
-    rounded_time = round_to_interval(current_time, interval_minutes)
-    return to_str(rounded_time)
+    return to_str(current_time)
 
 
 ###############################
