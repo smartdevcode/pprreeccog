@@ -151,6 +151,47 @@ def round_minute_down(timestamp: datetime, base: int = 5) -> datetime:
     return timestamp.replace(minute=correct_minute, second=0, microsecond=0)
 
 
+def round_to_interval(timestamp: datetime, interval_minutes: int = 5) -> datetime:
+    """
+    Round a timestamp to the nearest interval (up or down).
+
+    Args:
+        timestamp (datetime): The timestamp to round
+        interval_minutes (int): The interval in minutes to round to. Defaults to 5.
+
+    Returns:
+        datetime: A new timestamp rounded to the nearest interval
+
+    Example:
+        >>> dt = datetime(2024, 1, 1, 14, 13, 30, tzinfo=timezone('UTC'))
+        >>> round_to_interval(dt, 5)
+        datetime.datetime(2024, 1, 1, 14, 15, tzinfo=<UTC>)  # Rounds up to 14:15
+        >>> round_to_interval(dt, 15)
+        datetime.datetime(2024, 1, 1, 14, 15, tzinfo=<UTC>)  # Rounds up to 14:15
+        >>> dt = datetime(2024, 1, 1, 14, 16, 30, tzinfo=timezone('UTC'))
+        >>> round_to_interval(dt, 15)
+        datetime.datetime(2024, 1, 1, 14, 15, tzinfo=<UTC>)  # Rounds down to 14:15
+    """
+    if not isinstance(timestamp, datetime):
+        timestamp = to_datetime(timestamp)
+
+    # Ensure timestamp is in UTC
+    utc_timestamp = timestamp.astimezone(get_timezone())
+
+    # Calculate total minutes since midnight
+    minutes_since_midnight = utc_timestamp.hour * 60 + utc_timestamp.minute
+
+    # Calculate the nearest interval
+    rounded_minutes = round(minutes_since_midnight / interval_minutes) * interval_minutes
+
+    # Create new timestamp with rounded minutes
+    new_timestamp = utc_timestamp.replace(
+        hour=int(rounded_minutes // 60), minute=int(rounded_minutes % 60), second=0, microsecond=0
+    )
+
+    return new_timestamp
+
+
 def is_query_time(prediction_interval: int, timestamp: str, tolerance: int = 120) -> bool:
     """
     Tolerance - in seconds, how long to allow after epoch start
