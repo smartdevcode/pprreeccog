@@ -1,9 +1,14 @@
 Release Notes
 =============
 
+2.2.1
+-----
+Released on March 5th 2025
+- Resolved timestamp rounding bug triggered by approaching midnight
+
 2.2.0
 -----
-Released on March 4th 2025
+Released on March 3rd 2025
 - Implemented validator auto updater to pull latest changes from GitHub
 
 2.1.0
