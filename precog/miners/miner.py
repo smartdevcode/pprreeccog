@@ -40,6 +40,7 @@ class Miner:
         self.stop_event = asyncio.Event()
         self.loop.create_task(self.run())
         self.loop.create_task(loop_handler(self, self.resync_metagraph, sleep_time=self.resync_metagraph_rate))
+        self.loop.create_task(loop_handler(self, self.monitor_cm_cache, sleep_time=300))
         self.loop.run_forever()
 
     async def run(self):
@@ -57,10 +58,26 @@ class Miner:
                 self.axon.stop()
                 break
 
+    async def monitor_cm_cache(self):
+        """Periodically logs cache statistics."""
+        bt.logging.info("Running scheduled cache monitoring...")
+        if hasattr(self.cm, "log_cache_stats"):
+            self.cm.log_cache_stats()
+        else:
+            # Fallback if using original CMData without monitoring
+            cache_size = len(self.cm._cache) if hasattr(self.cm, "_cache") and not self.cm._cache.empty else 0
+            bt.logging.trace(f"CMData cache size: {cache_size} rows")
+
     async def resync_metagraph(self):
-        self.subtensor = bt.subtensor(config=self.config, network=self.config.subtensor.chain_endpoint)
         bt.logging.info("Syncing Metagraph...")
-        self.metagraph.sync(subtensor=self.subtensor)
+        try:
+            self.metagraph.sync(subtensor=self.subtensor)
+        except Exception as e:
+            bt.logging.debug(f"Failed to sync metagraph: {e}")
+            bt.logging.debug("Instantiating new subtensor")
+            self.subtensor = bt.subtensor(config=self.config, network=self.config.subtensor.chain_endpoint)
+            self.metagraph.sync(subtensor=self.subtensor)
+
         bt.logging.info("Metagraph updated, re-syncing hotkeys, dendrite pool and moving averages")
         self.current_block = func_with_retry(self.subtensor.get_current_block)
 

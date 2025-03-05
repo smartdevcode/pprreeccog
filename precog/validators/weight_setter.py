@@ -68,6 +68,7 @@ class weight_setter:
         )
         self.loop.create_task(loop_handler(self, self.resync_metagraph, sleep_time=self.resync_metagraph_rate))
         self.loop.create_task(loop_handler(self, self.set_weights, sleep_time=self.hyperparameters.weights_rate_limit))
+        self.loop.create_task(loop_handler(self, self.clear_old_miner_histories, sleep_time=3600))
 
     def __exit__(self, exc_type, exc_value, traceback):
         self.save_state()
@@ -93,13 +94,33 @@ class weight_setter:
                 miner_uids.append(uid)
         return miner_uids
 
-    async def resync_metagraph(self):
+    async def clear_old_miner_histories(self):
+        """Periodically clears old predictions from all MinerHistory objects."""
+        bt.logging.info("Clearing old predictions (>24h) from MinerHistory...")
+
+        try:
+            for uid in self.MinerHistory:
+                # Call the clear_old_predictions method on each MinerHistory object
+                self.MinerHistory[uid].clear_old_predictions()
+
+            # Save the updated state after clearing
+            self.save_state()
+            bt.logging.success("Successfully cleared old predictions from all miners")
+        except Exception as e:
+            bt.logging.error(f"Error clearing old predictions: {e}")
+
+    async def resync_metagraph(self):  # noqa: C901
         """Resyncs the metagraph and updates the hotkeys, available UIDs, and MinerHistory.
         Ensures all data structures remain in sync."""
-        # Resync subtensor and metagraph
-        self.subtensor = bt.subtensor(config=self.config, network=self.config.subtensor.chain_endpoint)
         bt.logging.info("Syncing Metagraph...")
-        self.metagraph.sync(subtensor=self.subtensor)
+        try:
+            self.metagraph.sync(subtensor=self.subtensor)
+        except Exception as e:
+            bt.logging.debug(f"Failed to sync metagraph: {e}")
+            bt.logging.debug("Instantiating new subtensor")
+            self.subtensor = bt.subtensor(config=self.config, network=self.config.subtensor.chain_endpoint)
+            self.metagraph.sync(subtensor=self.subtensor)
+
         bt.logging.info("Metagraph updated, re-syncing hotkeys, dendrite pool and moving averages")
 
         # Get current state for logging
