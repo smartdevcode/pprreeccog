@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import List
 
 from precog.utils.timestamp import get_now, get_timezone, round_minute_down, to_datetime
@@ -33,28 +33,47 @@ class MinerHistory:
         self.intervals = filtered_interval_dict
 
     def format_predictions(self, reference_timestamp=None, hours: int = 1):
-        # intervals = []
+        """
+        Filter and format prediction and interval data based on a reference timestamp and time window.
+
+        This function filters the prediction and interval dictionaries to include only entries
+        within a specified time window, ending at the reference timestamp and extending back
+        by the specified number of hours.
+
+        Parameters:
+        -----------
+        reference_timestamp : datetime or str, optional
+            The end timestamp for the time window. If None, the current time rounded down
+            to the nearest minute is used. If a string is provided, it will be converted
+            to a datetime object.
+        hours : int, default=1
+            The number of hours to look back from the reference timestamp.
+
+        Returns:
+        --------
+        tuple
+            A tuple containing two dictionaries:
+            - filtered_pred_dict: Dictionary of filtered predictions where keys are timestamps
+            and values are the corresponding prediction values.
+            - filtered_interval_dict: Dictionary of filtered intervals where keys are timestamps
+            and values are the corresponding interval values.
+
+        Notes:
+        ------
+        The actual time window used is (hours + 1) to ensure complete coverage of the requested period.
+        """
         if reference_timestamp is None:
             reference_timestamp = round_minute_down(get_now())
         if isinstance(reference_timestamp, str):
             reference_timestamp = to_datetime(reference_timestamp)
+
         start_time = round_minute_down(reference_timestamp) - timedelta(hours=hours + 1)
+
         filtered_pred_dict = {
             key: value for key, value in self.predictions.items() if start_time <= key <= reference_timestamp
         }
         filtered_interval_dict = {
             key: value for key, value in self.intervals.items() if start_time <= key <= reference_timestamp
         }
-        return filtered_pred_dict, filtered_interval_dict
 
-    def get_relevant_timestamps(self, reference_timestamp: datetime):
-        # returns a list of aligned timestamps
-        # round down reference to nearest 5m
-        round_down_now = round_minute_down(reference_timestamp)
-        # get the timestamps for the past 12 epochs
-        timestamps = [round_down_now - timedelta(minutes=5 * i) for i in range(12)]
-        # remove any timestamps that are not in the dicts
-        filtered_list = [
-            item for item in timestamps if item in self.predictions.keys() and item in self.intervals.keys()
-        ]
-        return filtered_list
+        return filtered_pred_dict, filtered_interval_dict

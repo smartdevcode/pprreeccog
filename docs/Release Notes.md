@@ -1,6 +1,11 @@
 Release Notes
 =============
 
+2.3.0
+-----
+Released on March 10th 2025
+- Increase the evaluation window to include 6 hours of miner predictions
+
 2.2.2
 -----
 Released on March 5th 2025

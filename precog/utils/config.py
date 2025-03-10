@@ -233,10 +233,6 @@ def add_validator_args(parser):
         default="opentensor-dev",
     )
 
-    parser.add_argument("--prediction_interval", type=int, default=5)
-
-    parser.add_argument("--N_TIMEPOINTS", type=int, default=12)
-
     parser.add_argument("--reset_state", action="store_true", dest="reset_state", help="Overwrites the state file")
 
 
