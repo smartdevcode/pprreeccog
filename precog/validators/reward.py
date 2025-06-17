@@ -95,8 +95,11 @@ def calc_rewards(
 
     point_weights = get_average_weights_for_ties(point_ranks, decay)
     interval_weights = get_average_weights_for_ties(interval_ranks, decay)
+    bt.logging.trace(f"point_weights: {point_weights}")
+    bt.logging.trace(f"interval_weights: {point_weights}")
 
     base_rewards = (point_weights + interval_weights) / 2
+    bt.logging.trace(f"base_rewards: {base_rewards}")
     rewards = base_rewards * np.array(completeness_scores)
 
     return rewards
