@@ -442,8 +442,8 @@ async def forward(synapse: Challenge, cm: CMData) -> Challenge:
             intervals[asset] = [corrected_price * 0.95, corrected_price * 1.05]
             
             bt.logging.info(
-                f"🎯 {asset}: Advanced Ensemble Prediction=${point_estimate:.2f} | "
-                f"Interval=[${lower_bound:.2f}, ${upper_bound:.2f}]"
+                f"🎯 {asset}: Advanced Ensemble Prediction=${corrected_price:.2f} | "
+                f"Interval=[${corrected_price * 0.95:.2f}, ${corrected_price * 1.05:.2f}]"
             )
             
         except Exception as e:
