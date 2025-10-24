@@ -24,8 +24,8 @@ register:
 	}
 
 miner:
-	pm2 start --name $(MINER_NAME) --interpreter /root/.pyenv/versions/3.10.9/bin/python -- precog/miners/miner.py \
-		--neuron.name $(MINER_NAME) \
+	pm2 start precog/miners/miner.py --name $(MINER_NAME) --interpreter /root/.pyenv/versions/3.10.9/bin/python \
+		-- --neuron.name $(MINER_NAME) \
 		--wallet.name $(COLDKEY) \
 		--wallet.hotkey $(MINER_HOTKEY) \
 		--subtensor.chain_endpoint $($(NETWORK)) \
@@ -34,12 +34,12 @@ miner:
 		--logging.level $(LOGGING_LEVEL) \
 		--timeout $(TIMEOUT) \
 		--vpermit_tao_limit $(VPERMIT_TAO_LIMIT) \
-		--forward_function $(FORWARD_FUNCTION) \
+		--forward_function $(FORWARD_FUNCTION)
 
 # Advanced Custom Miners
 miner_lstm:
-	pm2 start --name $(MINER_NAME)_lstm --interpreter /root/.pyenv/versions/3.10.9/bin/python -- precog/miners/miner.py \
-		--neuron.name $(MINER_NAME)_lstm \
+	pm2 start precog/miners/miner.py --name $(MINER_NAME)_lstm --interpreter /root/.pyenv/versions/3.10.9/bin/python \
+		-- --neuron.name $(MINER_NAME)_lstm \
 		--wallet.name $(COLDKEY) \
 		--wallet.hotkey $(MINER_HOTKEY) \
 		--subtensor.chain_endpoint $($(NETWORK)) \
@@ -48,11 +48,11 @@ miner_lstm:
 		--logging.level $(LOGGING_LEVEL) \
 		--timeout $(TIMEOUT) \
 		--vpermit_tao_limit $(VPERMIT_TAO_LIMIT) \
-		--forward_function lstm_miner \
+		--forward_function lstm_miner
 
 miner_sentiment:
-	pm2 start --name $(MINER_NAME)_sentiment --interpreter /root/.pyenv/versions/3.10.9/bin/python -- precog/miners/miner.py \
-		--neuron.name $(MINER_NAME)_sentiment \
+	pm2 start precog/miners/miner.py --name $(MINER_NAME)_sentiment --interpreter /root/.pyenv/versions/3.10.9/bin/python \
+		-- --neuron.name $(MINER_NAME)_sentiment \
 		--wallet.name $(COLDKEY) \
 		--wallet.hotkey $(MINER_HOTKEY) \
 		--subtensor.chain_endpoint $($(NETWORK)) \
@@ -61,11 +61,11 @@ miner_sentiment:
 		--logging.level $(LOGGING_LEVEL) \
 		--timeout $(TIMEOUT) \
 		--vpermit_tao_limit $(VPERMIT_TAO_LIMIT) \
-		--forward_function sentiment_miner \
+		--forward_function sentiment_miner
 
 miner_advanced_ensemble:
-	pm2 start --name $(MINER_NAME)_advanced_ensemble --interpreter /root/.pyenv/versions/3.10.9/bin/python -- precog/miners/miner.py \
-		--neuron.name $(MINER_NAME)_advanced_ensemble \
+	pm2 start precog/miners/miner.py --name $(MINER_NAME)_advanced_ensemble --interpreter /root/.pyenv/versions/3.10.9/bin/python \
+		-- --neuron.name $(MINER_NAME)_advanced_ensemble \
 		--wallet.name $(COLDKEY) \
 		--wallet.hotkey $(MINER_HOTKEY) \
 		--subtensor.chain_endpoint $($(NETWORK)) \
@@ -74,11 +74,11 @@ miner_advanced_ensemble:
 		--logging.level $(LOGGING_LEVEL) \
 		--timeout $(TIMEOUT) \
 		--vpermit_tao_limit $(VPERMIT_TAO_LIMIT) \
-		--forward_function advanced_ensemble_miner \
+		--forward_function advanced_ensemble_miner
 
 miner_ensemble:
-	pm2 start --name $(MINER_NAME)_ensemble --interpreter /root/.pyenv/versions/3.10.9/bin/python -- precog/miners/miner.py \
-		--neuron.name $(MINER_NAME)_ensemble \
+	pm2 start precog/miners/miner.py --name $(MINER_NAME)_ensemble --interpreter /root/.pyenv/versions/3.10.9/bin/python \
+		-- --neuron.name $(MINER_NAME)_ensemble \
 		--wallet.name $(COLDKEY) \
 		--wallet.hotkey $(MINER_HOTKEY) \
 		--subtensor.chain_endpoint $($(NETWORK)) \
@@ -87,11 +87,11 @@ miner_ensemble:
 		--logging.level $(LOGGING_LEVEL) \
 		--timeout $(TIMEOUT) \
 		--vpermit_tao_limit $(VPERMIT_TAO_LIMIT) \
-		--forward_function ensemble_miner \
+		--forward_function ensemble_miner
 
 miner_ml:
-	pm2 start --name $(MINER_NAME)_ml --interpreter /root/.pyenv/versions/3.10.9/bin/python -- precog/miners/miner.py \
-		--neuron.name $(MINER_NAME)_ml \
+	pm2 start precog/miners/miner.py --name $(MINER_NAME)_ml --interpreter /root/.pyenv/versions/3.10.9/bin/python \
+		-- --neuron.name $(MINER_NAME)_ml \
 		--wallet.name $(COLDKEY) \
 		--wallet.hotkey $(MINER_HOTKEY) \
 		--subtensor.chain_endpoint $($(NETWORK)) \
@@ -100,11 +100,11 @@ miner_ml:
 		--logging.level $(LOGGING_LEVEL) \
 		--timeout $(TIMEOUT) \
 		--vpermit_tao_limit $(VPERMIT_TAO_LIMIT) \
-		--forward_function ml_miner \
+		--forward_function ml_miner
 
 miner_technical:
-	pm2 start --name $(MINER_NAME)_technical --interpreter /root/.pyenv/versions/3.10.9/bin/python -- precog/miners/miner.py \
-		--neuron.name $(MINER_NAME)_technical \
+	pm2 start precog/miners/miner.py --name $(MINER_NAME)_technical --interpreter /root/.pyenv/versions/3.10.9/bin/python \
+		-- --neuron.name $(MINER_NAME)_technical \
 		--wallet.name $(COLDKEY) \
 		--wallet.hotkey $(MINER_HOTKEY) \
 		--subtensor.chain_endpoint $($(NETWORK)) \
@@ -113,7 +113,7 @@ miner_technical:
 		--logging.level $(LOGGING_LEVEL) \
 		--timeout $(TIMEOUT) \
 		--vpermit_tao_limit $(VPERMIT_TAO_LIMIT) \
-		--forward_function technical_analysis_miner \
+		--forward_function technical_analysis_miner
 
 validator:
 	pm2 start --name $(VALIDATOR_NAME) python3 -- precog/validators/validator.py \
