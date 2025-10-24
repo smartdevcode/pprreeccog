@@ -30,10 +30,9 @@ class RealTimePriceFetcher:
             self.cache.pop('tao', None)  # Clear TAO from cache
             self.cache.pop('tao_bittensor', None)  # Clear TAO_BITTENSOR from cache
         
-        # Use cache if recent enough
-        if current_time - self.last_update < self.cache_timeout and self.cache:
-            bt.logging.debug("Using cached prices")
-            return self.cache
+        # Always fetch fresh prices for better accuracy (disable caching)
+        # This ensures we get the most current market prices for predictions
+        bt.logging.debug("Fetching fresh prices for maximum accuracy")
         
         prices = {}
         

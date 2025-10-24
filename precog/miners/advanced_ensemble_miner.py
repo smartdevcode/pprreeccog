@@ -32,6 +32,89 @@ class MetaLearner:
         self.market_price_cache = {}
         self.validation_threshold = 0.15  # 15% deviation threshold
         
+        # Performance monitoring
+        self.prediction_accuracy_history = {}
+        self.interval_score_history = {}
+        self.performance_metrics = {}
+        self.accuracy_threshold = 0.85  # Target accuracy threshold
+        self.improvement_tracking = True
+        
+    def track_prediction_performance(self, asset: str, prediction: float, actual_price: float, 
+                                   interval: Tuple[float, float], timestamp: str):
+        """Track prediction accuracy and interval performance."""
+        try:
+            # Calculate point prediction error
+            point_error = abs(prediction - actual_price) / actual_price
+            
+            # Calculate interval performance
+            lower, upper = interval
+            inclusion_factor = 1.0 if lower <= actual_price <= upper else 0.0
+            width_factor = (upper - lower) / prediction if prediction > 0 else 0.0
+            interval_score = inclusion_factor * min(width_factor, 1.0)
+            
+            # Store performance data
+            if asset not in self.prediction_accuracy_history:
+                self.prediction_accuracy_history[asset] = []
+                self.interval_score_history[asset] = []
+            
+            self.prediction_accuracy_history[asset].append({
+                'timestamp': timestamp,
+                'prediction': prediction,
+                'actual': actual_price,
+                'point_error': point_error,
+                'interval_score': interval_score
+            })
+            
+            # Keep only last 100 predictions
+            if len(self.prediction_accuracy_history[asset]) > 100:
+                self.prediction_accuracy_history[asset] = self.prediction_accuracy_history[asset][-100:]
+            
+            # Calculate performance metrics
+            self._calculate_performance_metrics(asset)
+            
+            # Log performance
+            bt.logging.info(
+                f"📊 {asset} Performance: Point Error: {point_error:.4f} | "
+                f"Interval Score: {interval_score:.4f} | "
+                f"Avg Error: {self.performance_metrics.get(asset, {}).get('avg_point_error', 0):.4f}"
+            )
+            
+        except Exception as e:
+            bt.logging.error(f"Failed to track prediction performance: {e}")
+    
+    def _calculate_performance_metrics(self, asset: str):
+        """Calculate performance metrics for an asset."""
+        if asset not in self.prediction_accuracy_history:
+            return
+        
+        history = self.prediction_accuracy_history[asset]
+        if not history:
+            return
+        
+        # Calculate metrics
+        point_errors = [h['point_error'] for h in history]
+        interval_scores = [h['interval_score'] for h in history]
+        
+        self.performance_metrics[asset] = {
+            'avg_point_error': np.mean(point_errors),
+            'median_point_error': np.median(point_errors),
+            'avg_interval_score': np.mean(interval_scores),
+            'prediction_count': len(history),
+            'accuracy_rate': np.mean([1.0 if e < 0.05 else 0.0 for e in point_errors])  # 5% accuracy threshold
+        }
+    
+    def get_performance_summary(self) -> Dict:
+        """Get overall performance summary."""
+        summary = {}
+        for asset, metrics in self.performance_metrics.items():
+            summary[asset] = {
+                'avg_error': f"{metrics['avg_point_error']:.4f}",
+                'accuracy_rate': f"{metrics['accuracy_rate']:.2%}",
+                'avg_interval_score': f"{metrics['avg_interval_score']:.4f}",
+                'predictions': metrics['prediction_count']
+            }
+        return summary
+        
     def identify_market_regime(self, data: pd.DataFrame) -> str:
         """Identify current market regime (trending, ranging, volatile)."""
         if data.empty or len(data) < 50:
@@ -475,6 +558,20 @@ async def forward(synapse: Challenge, cm: CMData) -> Challenge:
                 f"Interval=[${corrected_price * 0.95:.2f}, ${corrected_price * 1.05:.2f}]"
             )
             
+            # Track prediction for performance monitoring
+            if ensemble_miner.meta_learner.improvement_tracking:
+                try:
+                    # Get current market price for performance tracking
+                    current_market_prices = get_current_market_prices([asset])
+                    if asset in current_market_prices:
+                        current_price = current_market_prices[asset]
+                        ensemble_miner.meta_learner.track_prediction_performance(
+                            asset, corrected_price, current_price, 
+                            (corrected_price * 0.95, corrected_price * 1.05), synapse.timestamp
+                        )
+                except Exception as e:
+                    bt.logging.debug(f"Performance tracking failed: {e}")
+            
         except Exception as e:
             bt.logging.error(f"Advanced ensemble prediction failed for {asset}: {e}")
             # Fallback to latest price
@@ -501,6 +598,16 @@ async def forward(synapse: Challenge, cm: CMData) -> Challenge:
     # Log prediction prices for validation
     for asset, price in predictions.items():
         bt.logging.info(f"   - {asset.upper()}: ${price:.2f}")
+    
+    # Log performance summary if available
+    try:
+        performance_summary = ensemble_miner.meta_learner.get_performance_summary()
+        if performance_summary:
+            bt.logging.info("📊 Historical Performance Summary:")
+            for asset, metrics in performance_summary.items():
+                bt.logging.info(f"   {asset}: {metrics}")
+    except Exception as e:
+        bt.logging.debug(f"Performance summary logging failed: {e}")
     
     bt.logging.debug(f"⏱️ Advanced Ensemble Miner took: {total_time:.3f} seconds")
     
