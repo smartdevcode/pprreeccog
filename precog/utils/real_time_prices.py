@@ -279,22 +279,55 @@ class RealTimePriceFetcher:
                             try:
                                 bt.logging.debug(f"Trying alternative method for {asset} (CM asset: {cm_asset})")
                                 
-                                # Get data from last 24 hours to find any valid price
-                                alt_start = end_time - timedelta(hours=24)
-                                alt_data = cm.get_CM_ReferenceRate(
-                                    assets=[cm_asset],
-                                    start=alt_start,
-                                    end=end_time,
-                                    frequency="1h",
-                                    use_cache=False
-                                )
+                                # Try different time ranges for better data availability
+                                time_ranges = [
+                                    timedelta(hours=24),   # Last 24 hours
+                                    timedelta(hours=48),   # Last 48 hours
+                                    timedelta(hours=168),  # Last week
+                                ]
+                                
+                                alt_data = None
+                                for time_range in time_ranges:
+                                    alt_start = end_time - time_range
+                                    bt.logging.debug(f"Trying {time_range} time range for {asset}")
+                                    
+                                    alt_data = cm.get_CM_ReferenceRate(
+                                        assets=[cm_asset],
+                                        start=alt_start,
+                                        end=end_time,
+                                        frequency="1h",
+                                        use_cache=False
+                                    )
+                                    
+                                    if not alt_data.empty:
+                                        # Check if we have valid price data
+                                        for col in ['ReferenceRateUSD', 'priceUSD', 'price', 'close']:
+                                            if col in alt_data.columns:
+                                                valid_prices = alt_data[col].dropna()
+                                                if not valid_prices.empty:
+                                                    bt.logging.debug(f"Found valid data with {time_range} time range for {asset}")
+                                                    break
+                                        else:
+                                            continue  # Try next time range
+                                        break
+                                
+                                if alt_data is None or alt_data.empty:
+                                    bt.logging.warning(f"No alternative data found for {asset} with any time range")
+                                    alt_data = pd.DataFrame()  # Empty DataFrame for consistent handling
                                 
                                 bt.logging.debug(f"Alternative data for {asset}: shape={alt_data.shape}, columns={list(alt_data.columns) if not alt_data.empty else 'empty'}")
                                 
                                 if not alt_data.empty:
+                                    bt.logging.debug(f"Alternative data sample for {asset}: {alt_data.head()}")
+                                    
                                     for col in ['ReferenceRateUSD', 'priceUSD', 'price', 'close']:
                                         if col in alt_data.columns:
+                                            bt.logging.debug(f"Checking column {col} for {asset}")
+                                            bt.logging.debug(f"Column {col} values: {alt_data[col].tolist()}")
+                                            
                                             valid_prices = alt_data[col].dropna()
+                                            bt.logging.debug(f"Valid prices in {col}: {valid_prices.tolist()}")
+                                            
                                             if not valid_prices.empty:
                                                 latest_price = float(valid_prices.iloc[-1])
                                                 prices[asset.lower()] = latest_price
@@ -302,15 +335,47 @@ class RealTimePriceFetcher:
                                                 break
                                     else:
                                         bt.logging.warning(f"No valid price columns found in alternative data for {asset}")
+                                        
+                                        # Try to get any non-NaN value from the data
+                                        for col in alt_data.columns:
+                                            if col not in ['time', 'asset']:
+                                                bt.logging.debug(f"Trying to extract price from {col}")
+                                                col_data = alt_data[col].dropna()
+                                                if not col_data.empty:
+                                                    try:
+                                                        latest_price = float(col_data.iloc[-1])
+                                                        prices[asset.lower()] = latest_price
+                                                        bt.logging.debug(f"✅ Got {asset.upper()} price from {col}: ${latest_price:.2f}")
+                                                        break
+                                                    except (ValueError, TypeError):
+                                                        continue
                                 else:
                                     bt.logging.warning(f"Alternative data is empty for {asset}")
                             except Exception as e:
                                 bt.logging.debug(f"Alternative method failed for {asset}: {e}")
-                                # If alternative method fails, try fallback prices
-                                fallback_prices = {'btc': 110000.0, 'eth': 3900.0, 'tao': 400.0, 'tao_bittensor': 400.0}
-                                if asset.lower() in fallback_prices:
-                                    prices[asset.lower()] = fallback_prices[asset.lower()]
-                                    bt.logging.debug(f"✅ Using fallback price for {asset.upper()}: ${fallback_prices[asset.lower()]:.2f}")
+                                # If alternative method fails, try Binance for TAO prices
+                                if asset.lower() in ['tao', 'tao_bittensor']:
+                                    bt.logging.debug(f"CoinMetrics failed for {asset}, trying Binance...")
+                                    try:
+                                        binance_prices = self._fetch_from_binance([asset])
+                                        if asset.lower() in binance_prices:
+                                            prices[asset.lower()] = binance_prices[asset.lower()]
+                                            bt.logging.debug(f"✅ Got {asset.upper()} price from Binance: ${binance_prices[asset.lower()]:.2f}")
+                                        else:
+                                            raise Exception("Binance also failed")
+                                    except Exception as e:
+                                        bt.logging.debug(f"Binance failed for {asset}: {e}")
+                                        # Use current market price as fallback
+                                        fallback_prices = {'btc': 110000.0, 'eth': 3900.0, 'tao': 350.0, 'tao_bittensor': 350.0}
+                                        if asset.lower() in fallback_prices:
+                                            prices[asset.lower()] = fallback_prices[asset.lower()]
+                                            bt.logging.debug(f"✅ Using fallback price for {asset.upper()}: ${fallback_prices[asset.lower()]:.2f}")
+                                else:
+                                    # For BTC and ETH, use fallback prices
+                                    fallback_prices = {'btc': 110000.0, 'eth': 3900.0, 'tao': 350.0, 'tao_bittensor': 350.0}
+                                    if asset.lower() in fallback_prices:
+                                        prices[asset.lower()] = fallback_prices[asset.lower()]
+                                        bt.logging.debug(f"✅ Using fallback price for {asset.upper()}: ${fallback_prices[asset.lower()]:.2f}")
                     else:
                         bt.logging.warning(f"No CoinMetrics data for {asset} (CM asset: {cm_asset})")
                         
@@ -321,18 +386,42 @@ class RealTimePriceFetcher:
             # Ensure all requested assets have prices
             for asset in assets:
                 if asset.lower() not in prices:
-                    bt.logging.warning(f"No price found for {asset}, using fallback")
-                    fallback_prices = {'btc': 110000.0, 'eth': 3900.0, 'tao': 400.0, 'tao_bittensor': 400.0}
-                    if asset.lower() in fallback_prices:
-                        prices[asset.lower()] = fallback_prices[asset.lower()]
-                        bt.logging.debug(f"✅ Using fallback price for {asset.upper()}: ${fallback_prices[asset.lower()]:.2f}")
+                    bt.logging.warning(f"No price found for {asset}, trying Binance fallback...")
+                    
+                    # Try Binance as fallback for missing prices
+                    try:
+                        binance_prices = self._fetch_from_binance([asset])
+                        if asset.lower() in binance_prices:
+                            prices[asset.lower()] = binance_prices[asset.lower()]
+                            bt.logging.debug(f"✅ Got {asset.upper()} price from Binance fallback: ${binance_prices[asset.lower()]:.2f}")
+                        else:
+                            raise Exception("Binance fallback failed")
+                    except Exception as e:
+                        bt.logging.debug(f"Binance fallback failed for {asset}: {e}")
+                        
+                        # Use current market prices as final fallback
+                        fallback_prices = {'btc': 110000.0, 'eth': 3900.0, 'tao': 350.0, 'tao_bittensor': 350.0}
+                        if asset.lower() in fallback_prices:
+                            prices[asset.lower()] = fallback_prices[asset.lower()]
+                            bt.logging.debug(f"✅ Using final fallback price for {asset.upper()}: ${fallback_prices[asset.lower()]:.2f}")
             
             return prices
             
         except Exception as e:
             bt.logging.debug(f"CoinMetrics API failed: {e}")
+            
+            # Try Binance as emergency fallback
+            try:
+                bt.logging.debug("Trying Binance as emergency fallback...")
+                binance_prices = self._fetch_from_binance(assets)
+                if binance_prices:
+                    bt.logging.debug(f"✅ Got emergency prices from Binance: {binance_prices}")
+                    return binance_prices
+            except Exception as binance_error:
+                bt.logging.debug(f"Binance emergency fallback failed: {binance_error}")
+            
             # Return fallback prices if everything fails
-            fallback_prices = {'btc': 110000.0, 'eth': 3900.0, 'tao': 400.0, 'tao_bittensor': 400.0}
+            fallback_prices = {'btc': 110000.0, 'eth': 3900.0, 'tao': 350.0, 'tao_bittensor': 350.0}
             result = {}
             for asset in assets:
                 if asset.lower() in fallback_prices:
