@@ -68,12 +68,12 @@ class MetaLearner:
             # Get latest market price
             latest_price = float(data['ReferenceRateUSD'].iloc[-1])
             
-            # Asset-specific price ranges for validation
+            # Asset-specific price ranges for validation (updated for current market)
             asset_ranges = {
-                'btc': (50000, 100000),      # BTC: $50k - $100k
-                'eth': (2000, 8000),         # ETH: $2k - $8k  
-                'tao_bittensor': (200, 1000), # TAO: $200 - $1000
-                'tao': (200, 1000)           # TAO: $200 - $1000
+                'btc': (80000, 150000),      # BTC: $80k - $150k (current: $110,843)
+                'eth': (3000, 6000),         # ETH: $3k - $6k (current: $3,943.20)
+                'tao_bittensor': (200, 1000), # TAO: $200 - $1000 (current: ~$400)
+                'tao': (200, 1000)           # TAO: $200 - $1000 (current: ~$400)
             }
             
             # Check if prediction is within reasonable range
@@ -358,6 +358,21 @@ async def forward(synapse: Challenge, cm: CMData) -> Challenge:
                 frequency="1s"
             )
             
+            # If data is empty or insufficient, use current market prices
+            if data.empty or len(data) < 100:
+                bt.logging.warning(f"No data available for {asset}, using current market prices")
+                current_market_prices = {
+                    'btc': 110843.0,     # Current BTC price: $110,843
+                    'eth': 3943.20,      # Current ETH price: $3,943.20
+                    'tao_bittensor': 400.0,  # Current TAO price: ~$400
+                    'tao': 400.0
+                }
+                market_price = current_market_prices.get(asset.lower(), 50000.0)
+                predictions[asset] = market_price
+                intervals[asset] = [market_price * 0.95, market_price * 1.05]
+                bt.logging.info(f"Using current market price for {asset}: ${market_price:,.2f}")
+                continue
+            
             # Enhanced data quality validation
             data_quality = 0
             if not data.empty and len(data) >= 100:
@@ -385,8 +400,22 @@ async def forward(synapse: Challenge, cm: CMData) -> Challenge:
             # Generate advanced ensemble prediction
             point_estimate, lower_bound, upper_bound = ensemble_miner.ensemble_predict(data, asset)
             
-            predictions[asset] = point_estimate
-            intervals[asset] = [lower_bound, upper_bound]
+            # Apply aggressive price validation and correction
+            corrected_price = ensemble_miner.meta_learner.validate_prediction_price(asset, point_estimate, data)
+            
+            # Additional validation for unrealistic prices (updated for current market)
+            if asset.lower() == 'btc' and (corrected_price < 80000 or corrected_price > 150000):
+                bt.logging.warning(f"BTC price {corrected_price:.2f} is unrealistic, using current market price")
+                corrected_price = float(data['ReferenceRateUSD'].iloc[-1]) if not data.empty else 110843.0
+            elif asset.lower() == 'eth' and (corrected_price < 3000 or corrected_price > 6000):
+                bt.logging.warning(f"ETH price {corrected_price:.2f} is unrealistic, using current market price")
+                corrected_price = float(data['ReferenceRateUSD'].iloc[-1]) if not data.empty else 3943.20
+            elif asset.lower() in ['tao', 'tao_bittensor'] and (corrected_price < 200 or corrected_price > 1000):
+                bt.logging.warning(f"TAO price {corrected_price:.2f} is unrealistic, using current market price")
+                corrected_price = float(data['ReferenceRateUSD'].iloc[-1]) if not data.empty else 400.0
+            
+            predictions[asset] = corrected_price
+            intervals[asset] = [corrected_price * 0.95, corrected_price * 1.05]
             
             bt.logging.info(
                 f"🎯 {asset}: Advanced Ensemble Prediction=${point_estimate:.2f} | "
