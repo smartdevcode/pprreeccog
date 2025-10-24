@@ -455,7 +455,7 @@ async def forward(synapse: Challenge, cm: CMData) -> Challenge:
                 except Exception as e:
                     bt.logging.error(f"Failed to fetch real-time price for {asset}: {e}")
                     # Fallback to conservative estimates
-                    fallback_prices = {'btc': 65000.0, 'eth': 3500.0, 'tao': 400.0, 'tao_bittensor': 400.0}
+                    fallback_prices = {'btc': 110544.0, 'eth': 3907.0, 'tao': 400.0, 'tao_bittensor': 400.0}
                     market_price = fallback_prices.get(asset.lower(), 50000.0)
                     predictions[asset] = market_price
                     intervals[asset] = [market_price * 0.95, market_price * 1.05]
@@ -486,11 +486,11 @@ async def forward(synapse: Challenge, cm: CMData) -> Challenge:
                     try:
                         bt.logging.info(f"Fetching real-time ETH price due to poor data quality")
                         real_time_prices = get_current_market_prices(['eth'])
-                        latest_price = real_time_prices.get('eth', 3500.0)
+                        latest_price = real_time_prices.get('eth', 3907.0)
                         bt.logging.info(f"Using real-time ETH price: ${latest_price:,.2f}")
                     except Exception as e:
                         bt.logging.error(f"Failed to fetch real-time ETH price: {e}")
-                        latest_price = 3500.0  # Conservative fallback
+                        latest_price = 3907.0  # Conservative fallback
                 else:
                     latest_price = float(data['ReferenceRateUSD'].iloc[-1]) if not data.empty else 50000.0
                 predictions[asset] = latest_price
@@ -502,11 +502,11 @@ async def forward(synapse: Challenge, cm: CMData) -> Challenge:
                 try:
                     bt.logging.info(f"Using real-time {asset.upper()} price instead of ensemble prediction")
                     real_time_prices = get_current_market_prices([asset])
-                    corrected_price = real_time_prices.get(asset.lower(), 3500.0 if asset.lower() == 'eth' else 400.0)
+                    corrected_price = real_time_prices.get(asset.lower(), 3907.0 if asset.lower() == 'eth' else 400.0)
                     bt.logging.info(f"Using real-time {asset.upper()} price: ${corrected_price:,.2f}")
                 except Exception as e:
                     bt.logging.error(f"Failed to fetch real-time {asset.upper()} price: {e}")
-                    corrected_price = 3500.0 if asset.lower() == 'eth' else 400.0  # Conservative fallback
+                    corrected_price = 3907.0 if asset.lower() == 'eth' else 400.0  # Conservative fallback
             else:
                 # Generate advanced ensemble prediction for other assets
                 point_estimate, lower_bound, upper_bound = ensemble_miner.ensemble_predict(data, asset)
@@ -519,11 +519,11 @@ async def forward(synapse: Challenge, cm: CMData) -> Challenge:
                 bt.logging.warning(f"BTC price {corrected_price:.2f} is unrealistic, fetching real-time market price")
                 try:
                     real_time_prices = get_current_market_prices(['btc'])
-                    corrected_price = real_time_prices.get('btc', 65000.0)
+                    corrected_price = real_time_prices.get('btc', 110544.0)
                     bt.logging.info(f"Using real-time BTC price: ${corrected_price:,.2f}")
                 except Exception as e:
                     bt.logging.error(f"Failed to fetch real-time BTC price: {e}")
-                    corrected_price = 65000.0  # Conservative fallback
+                    corrected_price = 110544.0  # Conservative fallback
             elif asset.lower() == 'eth' and (corrected_price < 2000 or corrected_price > 10000):
                 bt.logging.warning(f"ETH price {corrected_price:.2f} is unrealistic, fetching real-time market price")
                 try:
@@ -531,11 +531,11 @@ async def forward(synapse: Challenge, cm: CMData) -> Challenge:
                     from precog.utils.real_time_prices import price_fetcher
                     price_fetcher.cache.pop('eth', None)  # Clear ETH from cache
                     real_time_prices = get_current_market_prices(['eth'])
-                    corrected_price = real_time_prices.get('eth', 3500.0)
+                    corrected_price = real_time_prices.get('eth', 3907.0)
                     bt.logging.info(f"Using real-time ETH price: ${corrected_price:,.2f}")
                 except Exception as e:
                     bt.logging.error(f"Failed to fetch real-time ETH price: {e}")
-                    corrected_price = 3500.0  # Conservative fallback
+                    corrected_price = 3907.0  # Conservative fallback
             elif asset.lower() in ['tao', 'tao_bittensor'] and (corrected_price < 100 or corrected_price > 2000):
                 bt.logging.warning(f"TAO price {corrected_price:.2f} is unrealistic, fetching real-time market price")
                 try:
