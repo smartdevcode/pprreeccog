@@ -68,6 +68,22 @@ class MetaLearner:
             # Get latest market price
             latest_price = float(data['ReferenceRateUSD'].iloc[-1])
             
+            # Asset-specific price ranges for validation
+            asset_ranges = {
+                'btc': (50000, 100000),      # BTC: $50k - $100k
+                'eth': (2000, 8000),         # ETH: $2k - $8k  
+                'tao_bittensor': (200, 1000), # TAO: $200 - $1000
+                'tao': (200, 1000)           # TAO: $200 - $1000
+            }
+            
+            # Check if prediction is within reasonable range
+            if asset.lower() in asset_ranges:
+                min_price, max_price = asset_ranges[asset.lower()]
+                if predicted_price < min_price or predicted_price > max_price:
+                    bt.logging.warning(f"Price {predicted_price:.2f} for {asset} outside reasonable range [{min_price}, {max_price}]")
+                    # Use latest market price as fallback
+                    return latest_price
+            
             # Calculate price deviation
             deviation = abs(predicted_price - latest_price) / latest_price
             
@@ -76,7 +92,7 @@ class MetaLearner:
                 bt.logging.warning(f"Price deviation too high for {asset}: {deviation:.2%}, applying correction")
                 
                 # Apply weighted correction towards market price
-                correction_factor = 0.7  # 70% towards market price
+                correction_factor = 0.8  # 80% towards market price (increased from 70%)
                 corrected_price = latest_price * correction_factor + predicted_price * (1 - correction_factor)
                 
                 bt.logging.info(f"Corrected {asset} price: {predicted_price:.2f} -> {corrected_price:.2f}")
@@ -324,9 +340,19 @@ async def forward(synapse: Challenge, cm: CMData) -> Challenge:
             end_time = to_datetime(synapse.timestamp)
             start_time_data = get_before(synapse.timestamp, hours=4, minutes=0, seconds=0)
             
+            # Asset-specific data fetching with proper asset mapping
+            asset_mapping = {
+                'btc': 'btc',
+                'eth': 'eth', 
+                'tao_bittensor': 'tao_bittensor',
+                'tao': 'tao_bittensor'
+            }
+            
+            cm_asset = asset_mapping.get(asset.lower(), asset.lower())
+            
             # Fetch data with enhanced validation
             data = cm.get_CM_ReferenceRate(
-                assets=[asset],
+                assets=[cm_asset],
                 start=to_str(start_time_data),
                 end=to_str(end_time),
                 frequency="1s"
@@ -383,11 +409,16 @@ async def forward(synapse: Challenge, cm: CMData) -> Challenge:
     total_time = time.perf_counter() - start_time
     avg_data_quality = data_quality_score / total_assets if total_assets > 0 else 0
     
+    # Enhanced performance summary with price validation info
     bt.logging.info(f"📊 Performance Summary:")
     bt.logging.info(f"   - Total time: {total_time:.3f} seconds")
     bt.logging.info(f"   - Data quality: {avg_data_quality:.3f}")
     bt.logging.info(f"   - Assets processed: {len(predictions)}/{total_assets}")
     bt.logging.info(f"   - Predictions generated: {len([p for p in predictions.values() if p is not None])}")
+    
+    # Log prediction prices for validation
+    for asset, price in predictions.items():
+        bt.logging.info(f"   - {asset.upper()}: ${price:.2f}")
     
     bt.logging.debug(f"⏱️ Advanced Ensemble Miner took: {total_time:.3f} seconds")
     
