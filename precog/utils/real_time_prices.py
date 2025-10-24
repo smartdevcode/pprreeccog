@@ -18,6 +18,9 @@ class RealTimePriceFetcher:
         self.last_update = 0
         self.api_failures = {}
         self.rate_limit_delay = 2  # Delay between API calls
+        self.background_fetching = False
+        self.fetch_interval = 30  # Fetch prices every 30 seconds
+        self.all_assets = ['btc', 'eth', 'tao_bittensor']  # All assets to fetch
         
     def get_current_prices(self, assets: list) -> Dict[str, float]:
         """Get current prices for multiple assets from reliable sources."""
@@ -202,6 +205,52 @@ class RealTimePriceFetcher:
         }
         
         return {asset.lower(): fallback_prices.get(asset.lower(), 50000.0) for asset in assets}
+    
+    def start_background_fetching(self):
+        """Start background price fetching for all assets."""
+        if self.background_fetching:
+            return
+        
+        self.background_fetching = True
+        bt.logging.info("🔄 Starting background price fetching for all assets")
+        
+        # Initial fetch
+        self._fetch_all_prices()
+        
+        # Start background thread
+        import threading
+        self.fetch_thread = threading.Thread(target=self._background_fetch_loop, daemon=True)
+        self.fetch_thread.start()
+    
+    def stop_background_fetching(self):
+        """Stop background price fetching."""
+        self.background_fetching = False
+        bt.logging.info("⏹️ Stopping background price fetching")
+    
+    def _background_fetch_loop(self):
+        """Background loop to fetch prices periodically."""
+        while self.background_fetching:
+            try:
+                time.sleep(self.fetch_interval)
+                if self.background_fetching:  # Check again after sleep
+                    self._fetch_all_prices()
+            except Exception as e:
+                bt.logging.error(f"Background price fetching error: {e}")
+                time.sleep(5)  # Wait before retrying
+    
+    def _fetch_all_prices(self):
+        """Fetch prices for all assets."""
+        try:
+            bt.logging.info(f"🔄 Background fetching prices for all assets: {self.all_assets}")
+            prices = self._fetch_from_binance(self.all_assets)
+            if prices:
+                self.cache = prices
+                self.last_update = time.time()
+                bt.logging.info(f"✅ Background fetch successful: {prices}")
+            else:
+                bt.logging.warning("Background fetch returned empty prices")
+        except Exception as e:
+            bt.logging.error(f"Background price fetch failed: {e}")
 
 
 # Global instance for easy access
@@ -211,3 +260,13 @@ price_fetcher = RealTimePriceFetcher()
 def get_current_market_prices(assets: list) -> Dict[str, float]:
     """Get current market prices for the specified assets."""
     return price_fetcher.get_current_prices(assets)
+
+
+def start_background_price_fetching():
+    """Start background price fetching for all assets."""
+    price_fetcher.start_background_fetching()
+
+
+def stop_background_price_fetching():
+    """Stop background price fetching."""
+    price_fetcher.stop_background_fetching()
