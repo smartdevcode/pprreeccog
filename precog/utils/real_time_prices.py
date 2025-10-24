@@ -19,7 +19,7 @@ class RealTimePriceFetcher:
         self.api_failures = {}
         self.rate_limit_delay = 2  # Delay between API calls
         self.background_fetching = False
-        self.fetch_interval = 30  # Fetch prices every 30 seconds
+        self.fetch_interval = 60  # Fetch prices every 60 seconds to avoid rate limits
         self.all_assets = ['btc', 'eth', 'tao_bittensor']  # All assets to fetch
         
     def get_current_prices(self, assets: list) -> Dict[str, float]:
@@ -150,44 +150,34 @@ class RealTimePriceFetcher:
             
             prices = {}
             
-            # Fetch all prices in a single request to avoid rate limits
-            symbols = []
-            for asset in assets:
+            # Fetch prices individually to avoid API issues with multiple symbols
+            for i, asset in enumerate(assets):
                 symbol = asset_mapping.get(asset.lower(), f"{asset.upper()}USDT")
-                symbols.append(symbol)
-            
-            # Single API call for all symbols
-            url = f"https://api.binance.com/api/v3/ticker/price"
-            params = {'symbols': json.dumps(symbols)}
-            
-            headers = {
-                'User-Agent': 'Precog-Miner/1.0',
-                'Accept': 'application/json'
-            }
-            
-            response = requests.get(url, params=params, timeout=10, headers=headers)
-            response.raise_for_status()
-            data = response.json()
-            
-            # Parse the response
-            if isinstance(data, list):
-                for item in data:
-                    if 'symbol' in item and 'price' in item:
-                        symbol = item['symbol']
-                        price = float(item['price'])
-                        
-                        # Map back to asset names
-                        for asset in assets:
-                            expected_symbol = asset_mapping.get(asset.lower(), f"{asset.upper()}USDT")
-                            if symbol == expected_symbol:
-                                prices[asset.lower()] = price
-                                break
-            else:
-                # Single symbol response
-                for asset in assets:
-                    symbol = asset_mapping.get(asset.lower(), f"{asset.upper()}USDT")
-                    if 'symbol' in data and data['symbol'] == symbol and 'price' in data:
+                url = f"https://api.binance.com/api/v3/ticker/price?symbol={symbol}"
+                
+                headers = {
+                    'User-Agent': 'Precog-Miner/1.0',
+                    'Accept': 'application/json'
+                }
+                
+                try:
+                    response = requests.get(url, timeout=10, headers=headers)
+                    response.raise_for_status()
+                    data = response.json()
+                    
+                    if 'price' in data:
                         prices[asset.lower()] = float(data['price'])
+                        bt.logging.debug(f"✅ Fetched {asset.upper()} price: ${prices[asset.lower()]:.2f}")
+                    else:
+                        bt.logging.warning(f"No price data for {asset}")
+                        
+                except Exception as e:
+                    bt.logging.debug(f"Failed to fetch {asset} price: {e}")
+                    continue
+                
+                # Small delay between requests to avoid rate limiting
+                if i < len(assets) - 1:  # Don't delay after the last request
+                    time.sleep(0.1)
                     
             return prices
             
