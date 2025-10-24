@@ -16,7 +16,7 @@ from precog.miners.ml_miner import MLMiner
 from precog.miners.technical_analysis_miner import TechnicalAnalysisMiner
 from precog.miners.lstm_miner import LSTMMiner
 from precog.miners.sentiment_miner import SentimentMiner
-from precog.utils.real_time_prices import get_current_market_prices, start_background_price_fetching
+from precog.utils.real_time_prices import get_current_market_prices, start_background_price_fetching, force_fresh_price_fetch
 
 
 class MetaLearner:
@@ -418,6 +418,10 @@ async def forward(synapse: Challenge, cm: CMData) -> Challenge:
     try:
         start_background_price_fetching()
         bt.logging.info("🚀 Background price fetching started for all assets")
+        
+        # Force an immediate fresh price fetch
+        force_fresh_price_fetch()
+        bt.logging.info("🔄 Forced immediate fresh price fetch for all assets")
     except Exception as e:
         bt.logging.debug(f"Background price fetching already running or failed to start: {e}")
     

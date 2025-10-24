@@ -229,11 +229,16 @@ class RealTimePriceFetcher:
     
     def _background_fetch_loop(self):
         """Background loop to fetch prices periodically."""
+        bt.logging.info(f"🔄 Background fetch loop started, will fetch every {self.fetch_interval} seconds")
         while self.background_fetching:
             try:
                 time.sleep(self.fetch_interval)
                 if self.background_fetching:  # Check again after sleep
+                    bt.logging.debug("🔄 Background fetch loop: triggering price fetch")
                     self._fetch_all_prices()
+                else:
+                    bt.logging.info("⏹️ Background fetch loop: stopping")
+                    break
             except Exception as e:
                 bt.logging.error(f"Background price fetching error: {e}")
                 time.sleep(5)  # Wait before retrying
@@ -244,9 +249,11 @@ class RealTimePriceFetcher:
             bt.logging.info(f"🔄 Background fetching prices for all assets: {self.all_assets}")
             prices = self._fetch_from_binance(self.all_assets)
             if prices:
-                self.cache = prices
+                # Force update cache and timestamp
+                self.cache = prices.copy()
                 self.last_update = time.time()
                 bt.logging.info(f"✅ Background fetch successful: {prices}")
+                bt.logging.info(f"📊 Cache updated at: {time.strftime('%H:%M:%S')}")
             else:
                 bt.logging.warning("Background fetch returned empty prices")
         except Exception as e:
@@ -270,3 +277,8 @@ def start_background_price_fetching():
 def stop_background_price_fetching():
     """Stop background price fetching."""
     price_fetcher.stop_background_fetching()
+
+
+def force_fresh_price_fetch():
+    """Force a fresh price fetch for all assets."""
+    price_fetcher._fetch_all_prices()
