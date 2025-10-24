@@ -21,7 +21,7 @@ def test_price_fetching():
     print("\n📡 Fetching prices...")
     
     # Test multiple fetches to see caching in action
-    for i in range(3):
+    for i in range(5):
         print(f"\n--- Fetch #{i+1} ---")
         start_time = time.time()
         
@@ -36,10 +36,11 @@ def test_price_fetching():
         except Exception as e:
             print(f"❌ Fetch failed: {e}")
         
-        # Wait 2 seconds between fetches
-        if i < 2:
-            print("⏳ Waiting 2 seconds before next fetch...")
-            time.sleep(2)
+        # Wait different amounts to test cache behavior
+        if i < 4:
+            wait_time = 10 if i == 1 else 5  # Wait 10 seconds after 2nd fetch, 5 seconds otherwise
+            print(f"⏳ Waiting {wait_time} seconds before next fetch...")
+            time.sleep(wait_time)
     
     print("\n🎯 Expected Results:")
     print("- First fetch: Should use Binance API")

@@ -14,7 +14,7 @@ class RealTimePriceFetcher:
     
     def __init__(self):
         self.cache = {}
-        self.cache_timeout = 60  # Cache for 60 seconds to avoid rate limits
+        self.cache_timeout = 30  # Cache for 30 seconds to balance freshness and rate limits
         self.last_update = 0
         self.api_failures = {}
         self.rate_limit_delay = 2  # Delay between API calls
@@ -23,29 +23,28 @@ class RealTimePriceFetcher:
         """Get current prices for multiple assets from reliable sources."""
         current_time = time.time()
         
-        # Only clear cache if it's been more than 60 seconds to avoid excessive API calls
-        if current_time - self.last_update > 60:
-            if 'eth' in [asset.lower() for asset in assets]:
-                bt.logging.debug("Cache expired, will fetch fresh prices for ETH")
-                self.cache.pop('eth', None)
-            if 'tao' in [asset.lower() for asset in assets] or 'tao_bittensor' in [asset.lower() for asset in assets]:
-                bt.logging.debug("Cache expired, will fetch fresh prices for TAO")
-                self.cache.pop('tao', None)
-                self.cache.pop('tao_bittensor', None)
+        # Check if cache is expired and needs refresh
+        cache_expired = current_time - self.last_update > self.cache_timeout
         
-        # Use cache if recent enough to avoid rate limits
-        if current_time - self.last_update < self.cache_timeout and self.cache:
-            bt.logging.debug("Using cached prices to avoid rate limits")
+        # Use cache if recent enough and not expired
+        if not cache_expired and self.cache:
+            bt.logging.debug("Using cached prices (cache still fresh)")
             return self.cache
+        
+        # Cache is expired or empty, need to fetch fresh prices
+        if cache_expired:
+            bt.logging.debug(f"Cache expired (age: {current_time - self.last_update:.1f}s), fetching fresh prices")
+            # Clear the cache to force fresh fetch
+            self.cache.clear()
         
         prices = {}
         
         # Use only Binance API to avoid rate limiting issues
         try:
-            bt.logging.debug(f"Fetching prices from Binance for: {assets}")
+            bt.logging.info(f"🔄 Making API call to Binance for: {assets}")
             prices = self._fetch_from_binance(assets)
             if prices:
-                bt.logging.info(f"✅ Fetched prices from Binance: {prices}")
+                bt.logging.info(f"✅ Successfully fetched fresh prices from Binance: {prices}")
             else:
                 bt.logging.warning("Binance returned empty prices, using fallback")
                 prices = self._get_fallback_prices(assets)
