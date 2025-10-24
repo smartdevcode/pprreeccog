@@ -14,7 +14,7 @@ class RealTimePriceFetcher:
     
     def __init__(self):
         self.cache = {}
-        self.cache_timeout = 10  # Cache prices for only 10 seconds
+        self.cache_timeout = 0  # Disable caching - always fetch fresh prices
         self.last_update = 0
         
     def get_current_prices(self, assets: list) -> Dict[str, float]:
@@ -90,10 +90,8 @@ class RealTimePriceFetcher:
                 coin_id = asset_mapping.get(asset.lower(), asset.lower())
                 if coin_id in data and 'usd' in data[coin_id]:
                     base_price = float(data[coin_id]['usd'])
-                    # Add small random variation to simulate real market fluctuations
-                    import random
-                    variation = random.uniform(-0.001, 0.001)  # ±0.1% variation
-                    prices[asset.lower()] = base_price * (1 + variation)
+                    # Use actual real-time price without artificial variation
+                    prices[asset.lower()] = base_price
                     
             return prices
             
@@ -123,10 +121,8 @@ class RealTimePriceFetcher:
                 
                 if 'data' in data and 'priceUsd' in data['data']:
                     base_price = float(data['data']['priceUsd'])
-                    # Add small random variation to simulate real market fluctuations
-                    import random
-                    variation = random.uniform(-0.001, 0.001)  # ±0.1% variation
-                    prices[asset.lower()] = base_price * (1 + variation)
+                    # Use actual real-time price without artificial variation
+                    prices[asset.lower()] = base_price
                     
             return prices
             
@@ -156,10 +152,8 @@ class RealTimePriceFetcher:
                 
                 if 'price' in data:
                     base_price = float(data['price'])
-                    # Add small random variation to simulate real market fluctuations
-                    import random
-                    variation = random.uniform(-0.001, 0.001)  # ±0.1% variation
-                    prices[asset.lower()] = base_price * (1 + variation)
+                    # Use actual real-time price without artificial variation
+                    prices[asset.lower()] = base_price
                     
             return prices
             

@@ -414,16 +414,16 @@ async def forward(synapse: Challenge, cm: CMData) -> Challenge:
                 intervals[asset] = [latest_price * 0.95, latest_price * 1.05]
                 continue
             
-            # For ETH, always use real-time prices instead of ensemble prediction
-            if asset.lower() == 'eth':
+            # For ETH and TAO, always use real-time prices instead of ensemble prediction
+            if asset.lower() in ['eth', 'tao', 'tao_bittensor']:
                 try:
-                    bt.logging.info(f"Using real-time ETH price instead of ensemble prediction")
-                    real_time_prices = get_current_market_prices(['eth'])
-                    corrected_price = real_time_prices.get('eth', 3500.0)
-                    bt.logging.info(f"Using real-time ETH price: ${corrected_price:,.2f}")
+                    bt.logging.info(f"Using real-time {asset.upper()} price instead of ensemble prediction")
+                    real_time_prices = get_current_market_prices([asset])
+                    corrected_price = real_time_prices.get(asset.lower(), 3500.0 if asset.lower() == 'eth' else 400.0)
+                    bt.logging.info(f"Using real-time {asset.upper()} price: ${corrected_price:,.2f}")
                 except Exception as e:
-                    bt.logging.error(f"Failed to fetch real-time ETH price: {e}")
-                    corrected_price = 3500.0  # Conservative fallback
+                    bt.logging.error(f"Failed to fetch real-time {asset.upper()} price: {e}")
+                    corrected_price = 3500.0 if asset.lower() == 'eth' else 400.0  # Conservative fallback
             else:
                 # Generate advanced ensemble prediction for other assets
                 point_estimate, lower_bound, upper_bound = ensemble_miner.ensemble_predict(data, asset)
