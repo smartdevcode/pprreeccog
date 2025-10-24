@@ -434,6 +434,10 @@ async def forward(synapse: Challenge, cm: CMData) -> Challenge:
             elif asset.lower() in ['tao', 'tao_bittensor'] and (corrected_price < 100 or corrected_price > 2000):
                 bt.logging.warning(f"TAO price {corrected_price:.2f} is unrealistic, fetching real-time market price")
                 try:
+                    # Force fresh price fetch by clearing cache for TAO
+                    from precog.utils.real_time_prices import price_fetcher
+                    price_fetcher.cache.pop('tao', None)  # Clear TAO from cache
+                    price_fetcher.cache.pop('tao_bittensor', None)  # Clear TAO_BITTENSOR from cache
                     real_time_prices = get_current_market_prices(['tao'])
                     corrected_price = real_time_prices.get('tao', 400.0)
                     bt.logging.info(f"Using real-time TAO price: ${corrected_price:,.2f}")

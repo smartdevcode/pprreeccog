@@ -21,10 +21,14 @@ class RealTimePriceFetcher:
         """Get current prices for multiple assets from reliable sources."""
         current_time = time.time()
         
-        # Always fetch fresh prices for ETH to ensure variation
+        # Always fetch fresh prices for ETH and TAO to ensure variation
         if 'eth' in [asset.lower() for asset in assets]:
             bt.logging.debug("Forcing fresh price fetch for ETH")
             self.cache.pop('eth', None)  # Clear ETH from cache
+        if 'tao' in [asset.lower() for asset in assets] or 'tao_bittensor' in [asset.lower() for asset in assets]:
+            bt.logging.debug("Forcing fresh price fetch for TAO")
+            self.cache.pop('tao', None)  # Clear TAO from cache
+            self.cache.pop('tao_bittensor', None)  # Clear TAO_BITTENSOR from cache
         
         # Use cache if recent enough
         if current_time - self.last_update < self.cache_timeout and self.cache:
