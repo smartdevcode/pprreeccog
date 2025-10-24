@@ -27,6 +27,9 @@ class MetaLearner:
         self.adaptive_weights = True
         self.learning_rate = 0.01
         self.decay_factor = 0.95
+        self.price_validation = True
+        self.market_price_cache = {}
+        self.validation_threshold = 0.15  # 15% deviation threshold
         
     def identify_market_regime(self, data: pd.DataFrame) -> str:
         """Identify current market regime (trending, ranging, volatile)."""
@@ -37,17 +40,17 @@ class MetaLearner:
             prices = data['ReferenceRateUSD']
             returns = prices.pct_change().dropna()
             
-            # Calculate regime indicators
+            # Calculate regime indicators with enhanced metrics
             volatility = returns.rolling(20).std().iloc[-1]
             trend_strength = abs(prices.rolling(20).mean().pct_change().iloc[-1])
             range_ratio = (prices.rolling(20).max() / prices.rolling(20).min()).iloc[-1]
             
-            # Classify regime
-            if volatility > 0.03:  # High volatility
+            # Enhanced regime classification with more sophisticated thresholds
+            if volatility > 0.05:  # Very high volatility
                 return "volatile"
-            elif trend_strength > 0.01:  # Strong trend
+            elif trend_strength > 0.02:  # Strong trend
                 return "trending"
-            elif range_ratio < 1.05:  # Low range
+            elif range_ratio < 1.03:  # Very low range
                 return "ranging"
             else:
                 return "mixed"
@@ -55,6 +58,35 @@ class MetaLearner:
         except Exception as e:
             bt.logging.error(f"Market regime identification failed: {e}")
             return "unknown"
+    
+    def validate_prediction_price(self, asset: str, predicted_price: float, data: pd.DataFrame) -> float:
+        """Validate and correct prediction prices to ensure they're realistic."""
+        if not self.price_validation or data.empty:
+            return predicted_price
+        
+        try:
+            # Get latest market price
+            latest_price = float(data['ReferenceRateUSD'].iloc[-1])
+            
+            # Calculate price deviation
+            deviation = abs(predicted_price - latest_price) / latest_price
+            
+            # If deviation is too high, apply correction
+            if deviation > self.validation_threshold:
+                bt.logging.warning(f"Price deviation too high for {asset}: {deviation:.2%}, applying correction")
+                
+                # Apply weighted correction towards market price
+                correction_factor = 0.7  # 70% towards market price
+                corrected_price = latest_price * correction_factor + predicted_price * (1 - correction_factor)
+                
+                bt.logging.info(f"Corrected {asset} price: {predicted_price:.2f} -> {corrected_price:.2f}")
+                return corrected_price
+            
+            return predicted_price
+            
+        except Exception as e:
+            bt.logging.error(f"Error validating price for {asset}: {e}")
+            return predicted_price
     
     def calculate_strategy_performance(self, strategy_name: str, predictions: Dict, actual_prices: Dict) -> float:
         """Calculate performance score for a strategy."""
@@ -245,13 +277,18 @@ class AdvancedEnsembleMiner:
         weighted_prediction = sum(strategy_predictions[strategy] * adaptive_weights.get(strategy, 0) 
                                 for strategy in strategy_predictions.keys())
         
+        # Validate and correct prediction price
+        validated_prediction = self.meta_learner.validate_prediction_price(
+            "ensemble", weighted_prediction, data
+        )
+        
         # Calculate diversity and uncertainty
         diversity = self.calculate_prediction_diversity(strategy_predictions)
         uncertainty = self.calculate_prediction_uncertainty(strategy_predictions, adaptive_weights)
         
         # Apply uncertainty adjustments
         point_estimate, lower_bound, upper_bound = self.apply_uncertainty_adjustment(
-            weighted_prediction, uncertainty, diversity
+            validated_prediction, uncertainty, diversity
         )
         
         # Log ensemble details
@@ -263,7 +300,7 @@ class AdvancedEnsembleMiner:
 
 
 async def forward(synapse: Challenge, cm: CMData) -> Challenge:
-    """Advanced ensemble-based forward function."""
+    """Advanced ensemble-based forward function with enhanced validation and monitoring."""
     start_time = time.perf_counter()
     
     # Get assets to predict
@@ -277,13 +314,17 @@ async def forward(synapse: Challenge, cm: CMData) -> Challenge:
     # Initialize advanced ensemble miner
     ensemble_miner = AdvancedEnsembleMiner()
     
+    # Enhanced data validation
+    data_quality_score = 0
+    total_assets = len(assets)
+    
     for asset in assets:
         try:
             # Get historical data (4 hours for comprehensive analysis)
             end_time = to_datetime(synapse.timestamp)
             start_time_data = get_before(synapse.timestamp, hours=4, minutes=0, seconds=0)
             
-            # Fetch data
+            # Fetch data with enhanced validation
             data = cm.get_CM_ReferenceRate(
                 assets=[asset],
                 start=to_str(start_time_data),
@@ -291,8 +332,25 @@ async def forward(synapse: Challenge, cm: CMData) -> Challenge:
                 frequency="1s"
             )
             
-            if data.empty or len(data) < 100:
-                bt.logging.warning(f"Insufficient data for {asset}, using fallback")
+            # Enhanced data quality validation
+            data_quality = 0
+            if not data.empty and len(data) >= 100:
+                # Check data completeness
+                completeness = len(data.dropna()) / len(data)
+                # Check data recency (last data point should be recent)
+                time_diff = (to_datetime(synapse.timestamp) - data['time'].iloc[-1]).total_seconds()
+                recency = max(0, 1 - (time_diff / 3600))  # 1 hour tolerance
+                # Check price volatility (should be reasonable)
+                price_volatility = data['ReferenceRateUSD'].pct_change().std()
+                volatility_score = min(1.0, max(0, 1 - abs(price_volatility - 0.02) / 0.02))
+                
+                data_quality = (completeness * 0.4 + recency * 0.3 + volatility_score * 0.3)
+                data_quality_score += data_quality
+                
+                bt.logging.debug(f"Data quality for {asset}: {data_quality:.3f} (completeness: {completeness:.3f}, recency: {recency:.3f}, volatility: {volatility_score:.3f})")
+            
+            if data.empty or len(data) < 100 or data_quality < 0.5:
+                bt.logging.warning(f"Insufficient or poor quality data for {asset}, using fallback")
                 latest_price = float(data['ReferenceRateUSD'].iloc[-1]) if not data.empty else 50000.0
                 predictions[asset] = latest_price
                 intervals[asset] = [latest_price * 0.95, latest_price * 1.05]
@@ -321,7 +379,16 @@ async def forward(synapse: Challenge, cm: CMData) -> Challenge:
     synapse.predictions = predictions
     synapse.intervals = intervals
     
+    # Performance monitoring and reporting
     total_time = time.perf_counter() - start_time
+    avg_data_quality = data_quality_score / total_assets if total_assets > 0 else 0
+    
+    bt.logging.info(f"📊 Performance Summary:")
+    bt.logging.info(f"   - Total time: {total_time:.3f} seconds")
+    bt.logging.info(f"   - Data quality: {avg_data_quality:.3f}")
+    bt.logging.info(f"   - Assets processed: {len(predictions)}/{total_assets}")
+    bt.logging.info(f"   - Predictions generated: {len([p for p in predictions.values() if p is not None])}")
+    
     bt.logging.debug(f"⏱️ Advanced Ensemble Miner took: {total_time:.3f} seconds")
     
     return synapse
