@@ -41,6 +41,7 @@ class Miner:
         self.loop.create_task(self.run())
         self.loop.create_task(loop_handler(self, self.resync_metagraph, sleep_time=self.resync_metagraph_rate))
         self.loop.create_task(loop_handler(self, self.monitor_cm_cache, sleep_time=300))
+        self.loop.create_task(loop_handler(self, self.update_current_block, sleep_time=30))  # Update block every 30 seconds
         self.loop.run_forever()
 
     async def run(self):
@@ -80,6 +81,24 @@ class Miner:
 
         bt.logging.info("Metagraph updated, re-syncing hotkeys, dendrite pool and moving averages")
         self.current_block = func_with_retry(self.subtensor.get_current_block)
+
+    async def update_current_block(self):
+        """Update current block more frequently to detect network issues."""
+        try:
+            new_block = func_with_retry(self.subtensor.get_current_block)
+            if new_block != self.current_block:
+                bt.logging.debug(f"Block updated: {self.current_block} -> {new_block}")
+                self.current_block = new_block
+        except Exception as e:
+            bt.logging.warning(f"Failed to update current block: {e}")
+            # Try to reconnect
+            try:
+                bt.logging.info("Attempting to reconnect to subtensor...")
+                self.subtensor = bt.subtensor(config=self.config, network=self.config.subtensor.chain_endpoint)
+                self.current_block = func_with_retry(self.subtensor.get_current_block)
+                bt.logging.info("Successfully reconnected to subtensor")
+            except Exception as reconnect_error:
+                bt.logging.error(f"Failed to reconnect to subtensor: {reconnect_error}")
 
     async def forward(self, synapse: Challenge) -> Challenge:
         synapse = await self.forward_module.forward(synapse, self.cm)
