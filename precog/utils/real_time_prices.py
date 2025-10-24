@@ -14,7 +14,7 @@ class RealTimePriceFetcher:
     
     def __init__(self):
         self.cache = {}
-        self.cache_timeout = 30  # Cache for 30 seconds to avoid rate limits
+        self.cache_timeout = 60  # Cache for 60 seconds to avoid rate limits
         self.last_update = 0
         self.api_failures = {}
         self.rate_limit_delay = 2  # Delay between API calls
@@ -23,14 +23,15 @@ class RealTimePriceFetcher:
         """Get current prices for multiple assets from reliable sources."""
         current_time = time.time()
         
-        # Always fetch fresh prices for ETH and TAO to ensure variation
-        if 'eth' in [asset.lower() for asset in assets]:
-            bt.logging.debug("Forcing fresh price fetch for ETH")
-            self.cache.pop('eth', None)  # Clear ETH from cache
-        if 'tao' in [asset.lower() for asset in assets] or 'tao_bittensor' in [asset.lower() for asset in assets]:
-            bt.logging.debug("Forcing fresh price fetch for TAO")
-            self.cache.pop('tao', None)  # Clear TAO from cache
-            self.cache.pop('tao_bittensor', None)  # Clear TAO_BITTENSOR from cache
+        # Only clear cache if it's been more than 60 seconds to avoid excessive API calls
+        if current_time - self.last_update > 60:
+            if 'eth' in [asset.lower() for asset in assets]:
+                bt.logging.debug("Cache expired, will fetch fresh prices for ETH")
+                self.cache.pop('eth', None)
+            if 'tao' in [asset.lower() for asset in assets] or 'tao_bittensor' in [asset.lower() for asset in assets]:
+                bt.logging.debug("Cache expired, will fetch fresh prices for TAO")
+                self.cache.pop('tao', None)
+                self.cache.pop('tao_bittensor', None)
         
         # Use cache if recent enough to avoid rate limits
         if current_time - self.last_update < self.cache_timeout and self.cache:
@@ -39,34 +40,15 @@ class RealTimePriceFetcher:
         
         prices = {}
         
-        # Try multiple sources for reliability with smart API selection
+        # Use only Binance API to avoid rate limiting issues
         try:
-            # Check API failure history and prioritize working APIs
-            if self.api_failures.get('coingecko', 0) < 3:  # Try CoinGecko if not too many failures
-                bt.logging.debug(f"Attempting to fetch prices from CoinGecko for: {assets}")
-                prices = self._fetch_from_coingecko(assets)
-                if prices:
-                    bt.logging.info(f"✅ Fetched prices from CoinGecko: {prices}")
-                    self.api_failures['coingecko'] = 0  # Reset failure count
-                else:
-                    self.api_failures['coingecko'] = self.api_failures.get('coingecko', 0) + 1
-                    bt.logging.debug("CoinGecko returned empty prices, trying Binance")
-                    # Skip CoinCap if it's having DNS issues, go straight to Binance
-                    prices = self._fetch_from_binance(assets)
-                    if prices:
-                        bt.logging.info(f"✅ Fetched prices from Binance: {prices}")
-                    else:
-                        bt.logging.warning("All APIs returned empty prices, using fallback")
-                        prices = self._get_fallback_prices(assets)
+            bt.logging.debug(f"Fetching prices from Binance for: {assets}")
+            prices = self._fetch_from_binance(assets)
+            if prices:
+                bt.logging.info(f"✅ Fetched prices from Binance: {prices}")
             else:
-                # Skip CoinGecko if too many failures, go straight to Binance
-                bt.logging.debug("Skipping CoinGecko due to previous failures, trying Binance")
-                prices = self._fetch_from_binance(assets)
-                if prices:
-                    bt.logging.info(f"✅ Fetched prices from Binance: {prices}")
-                else:
-                    bt.logging.warning("Binance failed, using fallback")
-                    prices = self._get_fallback_prices(assets)
+                bt.logging.warning("Binance returned empty prices, using fallback")
+                prices = self._get_fallback_prices(assets)
                         
         except Exception as e:
             bt.logging.error(f"Failed to fetch real-time prices: {e}")
@@ -154,7 +136,7 @@ class RealTimePriceFetcher:
             return {}
     
     def _fetch_from_binance(self, assets: list) -> Dict[str, float]:
-        """Fetch prices from Binance API."""
+        """Fetch prices from Binance API with better rate limiting."""
         try:
             # Map assets to Binance symbols
             asset_mapping = {
@@ -165,18 +147,45 @@ class RealTimePriceFetcher:
             }
             
             prices = {}
+            
+            # Fetch all prices in a single request to avoid rate limits
+            symbols = []
             for asset in assets:
                 symbol = asset_mapping.get(asset.lower(), f"{asset.upper()}USDT")
-                url = f"https://api.binance.com/api/v3/ticker/price?symbol={symbol}"
-                
-                response = requests.get(url, timeout=5)
-                response.raise_for_status()
-                data = response.json()
-                
-                if 'price' in data:
-                    base_price = float(data['price'])
-                    # Use actual real-time price without artificial variation
-                    prices[asset.lower()] = base_price
+                symbols.append(symbol)
+            
+            # Single API call for all symbols
+            url = f"https://api.binance.com/api/v3/ticker/price"
+            params = {'symbols': json.dumps(symbols)}
+            
+            headers = {
+                'User-Agent': 'Precog-Miner/1.0',
+                'Accept': 'application/json'
+            }
+            
+            response = requests.get(url, params=params, timeout=10, headers=headers)
+            response.raise_for_status()
+            data = response.json()
+            
+            # Parse the response
+            if isinstance(data, list):
+                for item in data:
+                    if 'symbol' in item and 'price' in item:
+                        symbol = item['symbol']
+                        price = float(item['price'])
+                        
+                        # Map back to asset names
+                        for asset in assets:
+                            expected_symbol = asset_mapping.get(asset.lower(), f"{asset.upper()}USDT")
+                            if symbol == expected_symbol:
+                                prices[asset.lower()] = price
+                                break
+            else:
+                # Single symbol response
+                for asset in assets:
+                    symbol = asset_mapping.get(asset.lower(), f"{asset.upper()}USDT")
+                    if 'symbol' in data and data['symbol'] == symbol and 'price' in data:
+                        prices[asset.lower()] = float(data['price'])
                     
             return prices
             
