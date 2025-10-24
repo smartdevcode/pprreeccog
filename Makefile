@@ -36,6 +36,85 @@ miner:
 		--vpermit_tao_limit $(VPERMIT_TAO_LIMIT) \
 		--forward_function $(FORWARD_FUNCTION) \
 
+# Advanced Custom Miners
+miner_lstm:
+	pm2 start --name $(MINER_NAME)_lstm python3 -- precog/miners/miner.py \
+		--neuron.name $(MINER_NAME)_lstm \
+		--wallet.name $(COLDKEY) \
+		--wallet.hotkey $(MINER_HOTKEY) \
+		--subtensor.chain_endpoint $($(NETWORK)) \
+		--axon.port $(MINER_PORT) \
+		--netuid $(netuid) \
+		--logging.level $(LOGGING_LEVEL) \
+		--timeout $(TIMEOUT) \
+		--vpermit_tao_limit $(VPERMIT_TAO_LIMIT) \
+		--forward_function lstm_miner \
+
+miner_sentiment:
+	pm2 start --name $(MINER_NAME)_sentiment python3 -- precog/miners/miner.py \
+		--neuron.name $(MINER_NAME)_sentiment \
+		--wallet.name $(COLDKEY) \
+		--wallet.hotkey $(MINER_HOTKEY) \
+		--subtensor.chain_endpoint $($(NETWORK)) \
+		--axon.port $(MINER_PORT) \
+		--netuid $(netuid) \
+		--logging.level $(LOGGING_LEVEL) \
+		--timeout $(TIMEOUT) \
+		--vpermit_tao_limit $(VPERMIT_TAO_LIMIT) \
+		--forward_function sentiment_miner \
+
+miner_advanced_ensemble:
+	pm2 start --name $(MINER_NAME)_advanced_ensemble python3 -- precog/miners/miner.py \
+		--neuron.name $(MINER_NAME)_advanced_ensemble \
+		--wallet.name $(COLDKEY) \
+		--wallet.hotkey $(MINER_HOTKEY) \
+		--subtensor.chain_endpoint $($(NETWORK)) \
+		--axon.port $(MINER_PORT) \
+		--netuid $(netuid) \
+		--logging.level $(LOGGING_LEVEL) \
+		--timeout $(TIMEOUT) \
+		--vpermit_tao_limit $(VPERMIT_TAO_LIMIT) \
+		--forward_function advanced_ensemble_miner \
+
+miner_ensemble:
+	pm2 start --name $(MINER_NAME)_ensemble python3 -- precog/miners/miner.py \
+		--neuron.name $(MINER_NAME)_ensemble \
+		--wallet.name $(COLDKEY) \
+		--wallet.hotkey $(MINER_HOTKEY) \
+		--subtensor.chain_endpoint $($(NETWORK)) \
+		--axon.port $(MINER_PORT) \
+		--netuid $(netuid) \
+		--logging.level $(LOGGING_LEVEL) \
+		--timeout $(TIMEOUT) \
+		--vpermit_tao_limit $(VPERMIT_TAO_LIMIT) \
+		--forward_function ensemble_miner \
+
+miner_ml:
+	pm2 start --name $(MINER_NAME)_ml python3 -- precog/miners/miner.py \
+		--neuron.name $(MINER_NAME)_ml \
+		--wallet.name $(COLDKEY) \
+		--wallet.hotkey $(MINER_HOTKEY) \
+		--subtensor.chain_endpoint $($(NETWORK)) \
+		--axon.port $(MINER_PORT) \
+		--netuid $(netuid) \
+		--logging.level $(LOGGING_LEVEL) \
+		--timeout $(TIMEOUT) \
+		--vpermit_tao_limit $(VPERMIT_TAO_LIMIT) \
+		--forward_function ml_miner \
+
+miner_technical:
+	pm2 start --name $(MINER_NAME)_technical python3 -- precog/miners/miner.py \
+		--neuron.name $(MINER_NAME)_technical \
+		--wallet.name $(COLDKEY) \
+		--wallet.hotkey $(MINER_HOTKEY) \
+		--subtensor.chain_endpoint $($(NETWORK)) \
+		--axon.port $(MINER_PORT) \
+		--netuid $(netuid) \
+		--logging.level $(LOGGING_LEVEL) \
+		--timeout $(TIMEOUT) \
+		--vpermit_tao_limit $(VPERMIT_TAO_LIMIT) \
+		--forward_function technical_analysis_miner \
+
 validator:
 	pm2 start --name $(VALIDATOR_NAME) python3 -- precog/validators/validator.py \
 		--neuron.name $(VALIDATOR_NAME) \

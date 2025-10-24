@@ -1,0 +1,327 @@
+"""
+Advanced Ensemble miner with sophisticated weighting and meta-learning.
+This miner implements state-of-the-art ensemble methods for cryptocurrency prediction.
+"""
+
+import time
+from typing import Dict, List, Tuple
+import numpy as np
+import pandas as pd
+import bittensor as bt
+from precog.protocol import Challenge
+from precog.utils.cm_data import CMData
+from precog.utils.timestamp import get_before, to_datetime, to_str
+from precog.miners.base_miner import calculate_prediction_interval
+from precog.miners.ml_miner import MLMiner
+from precog.miners.technical_analysis_miner import TechnicalAnalysisMiner
+from precog.miners.lstm_miner import LSTMMiner
+from precog.miners.sentiment_miner import SentimentMiner
+
+
+class MetaLearner:
+    """Meta-learning system for dynamic ensemble weighting."""
+    
+    def __init__(self):
+        self.performance_history = {}
+        self.market_regimes = {}
+        self.adaptive_weights = True
+        self.learning_rate = 0.01
+        self.decay_factor = 0.95
+        
+    def identify_market_regime(self, data: pd.DataFrame) -> str:
+        """Identify current market regime (trending, ranging, volatile)."""
+        if data.empty or len(data) < 50:
+            return "unknown"
+        
+        try:
+            prices = data['ReferenceRateUSD']
+            returns = prices.pct_change().dropna()
+            
+            # Calculate regime indicators
+            volatility = returns.rolling(20).std().iloc[-1]
+            trend_strength = abs(prices.rolling(20).mean().pct_change().iloc[-1])
+            range_ratio = (prices.rolling(20).max() / prices.rolling(20).min()).iloc[-1]
+            
+            # Classify regime
+            if volatility > 0.03:  # High volatility
+                return "volatile"
+            elif trend_strength > 0.01:  # Strong trend
+                return "trending"
+            elif range_ratio < 1.05:  # Low range
+                return "ranging"
+            else:
+                return "mixed"
+                
+        except Exception as e:
+            bt.logging.error(f"Market regime identification failed: {e}")
+            return "unknown"
+    
+    def calculate_strategy_performance(self, strategy_name: str, predictions: Dict, actual_prices: Dict) -> float:
+        """Calculate performance score for a strategy."""
+        if strategy_name not in self.performance_history:
+            self.performance_history[strategy_name] = []
+        
+        # Calculate recent accuracy
+        recent_predictions = self.performance_history[strategy_name][-20:]  # Last 20 predictions
+        if len(recent_predictions) < 5:
+            return 1.0  # Default equal weight
+        
+        # Calculate performance metrics
+        errors = []
+        for pred, actual in recent_predictions:
+            if actual > 0:
+                error = abs(pred - actual) / actual
+                errors.append(error)
+        
+        if not errors:
+            return 1.0
+        
+        # Convert error to performance score (lower error = higher performance)
+        avg_error = np.mean(errors)
+        performance_score = 1.0 / (1.0 + avg_error)
+        
+        return performance_score
+    
+    def update_performance_history(self, strategy_name: str, prediction: float, actual_price: float):
+        """Update performance history for a strategy."""
+        if strategy_name not in self.performance_history:
+            self.performance_history[strategy_name] = []
+        
+        self.performance_history[strategy_name].append((prediction, actual_price))
+        
+        # Keep only recent history
+        if len(self.performance_history[strategy_name]) > 100:
+            self.performance_history[strategy_name] = self.performance_history[strategy_name][-100:]
+    
+    def calculate_adaptive_weights(self, market_regime: str, strategies: Dict) -> Dict[str, float]:
+        """Calculate adaptive weights based on market regime and performance."""
+        weights = {}
+        
+        for strategy_name in strategies.keys():
+            # Base performance score
+            performance_score = self.calculate_strategy_performance(strategy_name, {}, {})
+            
+            # Regime-specific adjustments
+            regime_multiplier = self.get_regime_multiplier(strategy_name, market_regime)
+            
+            # Calculate final weight
+            weights[strategy_name] = performance_score * regime_multiplier
+        
+        # Normalize weights
+        total_weight = sum(weights.values())
+        if total_weight > 0:
+            weights = {k: v / total_weight for k, v in weights.items()}
+        
+        return weights
+    
+    def get_regime_multiplier(self, strategy_name: str, market_regime: str) -> float:
+        """Get regime-specific multiplier for strategy performance."""
+        # Define strategy strengths in different market regimes
+        regime_strengths = {
+            'base': {'trending': 0.8, 'ranging': 1.2, 'volatile': 0.9, 'mixed': 1.0},
+            'ml': {'trending': 1.3, 'ranging': 0.9, 'volatile': 1.1, 'mixed': 1.1},
+            'technical': {'trending': 1.4, 'ranging': 1.1, 'volatile': 0.8, 'mixed': 1.0},
+            'lstm': {'trending': 1.2, 'ranging': 1.0, 'volatile': 1.3, 'mixed': 1.1},
+            'sentiment': {'trending': 0.9, 'ranging': 0.8, 'volatile': 1.4, 'mixed': 1.2}
+        }
+        
+        return regime_strengths.get(strategy_name, {}).get(market_regime, 1.0)
+
+
+class AdvancedEnsembleMiner:
+    """Advanced ensemble miner with meta-learning and regime detection."""
+    
+    def __init__(self):
+        self.strategies = {
+            'base': {'weight': 0.2, 'miner': None},
+            'ml': {'weight': 0.2, 'miner': MLMiner()},
+            'technical': {'weight': 0.2, 'miner': TechnicalAnalysisMiner()},
+            'lstm': {'weight': 0.2, 'miner': LSTMMiner()},
+            'sentiment': {'weight': 0.2, 'miner': SentimentMiner()}
+        }
+        self.meta_learner = MetaLearner()
+        self.uncertainty_threshold = 0.1
+        self.diversity_threshold = 0.05
+    
+    def calculate_prediction_diversity(self, predictions: Dict) -> float:
+        """Calculate diversity of predictions (higher diversity = better ensemble)."""
+        pred_values = list(predictions.values())
+        if len(pred_values) < 2:
+            return 0.0
+        
+        # Calculate coefficient of variation
+        mean_pred = np.mean(pred_values)
+        std_pred = np.std(pred_values)
+        diversity = std_pred / mean_pred if mean_pred > 0 else 0.0
+        
+        return diversity
+    
+    def calculate_prediction_uncertainty(self, predictions: Dict, weights: Dict[str, float]) -> float:
+        """Calculate uncertainty in ensemble prediction."""
+        if not predictions:
+            return 1.0
+        
+        # Weighted variance
+        weighted_mean = sum(pred * weights.get(strategy, 0) for strategy, pred in predictions.items())
+        weighted_variance = sum(weights.get(strategy, 0) * (pred - weighted_mean) ** 2 
+                              for strategy, pred in predictions.items())
+        
+        # Normalize uncertainty
+        uncertainty = min(1.0, weighted_variance / (weighted_mean ** 2) if weighted_mean > 0 else 1.0)
+        
+        return uncertainty
+    
+    def apply_uncertainty_adjustment(self, point_estimate: float, uncertainty: float, 
+                                   diversity: float) -> Tuple[float, float, float]:
+        """Apply uncertainty-based adjustments to prediction."""
+        # Increase interval width based on uncertainty
+        uncertainty_factor = 1.0 + uncertainty * 2.0
+        
+        # Increase interval width based on diversity
+        diversity_factor = 1.0 + diversity * 1.5
+        
+        # Combined adjustment
+        adjustment_factor = uncertainty_factor * diversity_factor
+        
+        # Calculate adjusted bounds
+        base_margin = point_estimate * 0.05  # 5% base margin
+        adjusted_margin = base_margin * adjustment_factor
+        
+        lower_bound = point_estimate - adjusted_margin
+        upper_bound = point_estimate + adjusted_margin
+        
+        # Ensure reasonable bounds
+        lower_bound = max(lower_bound, point_estimate * 0.85)
+        upper_bound = min(upper_bound, point_estimate * 1.15)
+        
+        return point_estimate, lower_bound, upper_bound
+    
+    def ensemble_predict(self, data: pd.DataFrame, asset: str) -> Tuple[float, float, float]:
+        """Generate advanced ensemble prediction."""
+        # Identify market regime
+        market_regime = self.meta_learner.identify_market_regime(data)
+        bt.logging.info(f"Market regime: {market_regime}")
+        
+        # Calculate adaptive weights
+        adaptive_weights = self.meta_learner.calculate_adaptive_weights(market_regime, self.strategies)
+        
+        # Get predictions from each strategy
+        strategy_predictions = {}
+        strategy_intervals = {}
+        
+        for strategy_name, strategy_info in self.strategies.items():
+            try:
+                if strategy_name == 'base':
+                    # Base strategy
+                    latest_price = float(data['ReferenceRateUSD'].iloc[-1])
+                    lower_bound, upper_bound = calculate_prediction_interval(
+                        latest_price, data['ReferenceRateUSD'], "ensemble"
+                    )
+                    strategy_predictions[strategy_name] = latest_price
+                    strategy_intervals[strategy_name] = (lower_bound, upper_bound)
+                else:
+                    # Other strategies
+                    miner = strategy_info['miner']
+                    if hasattr(miner, 'generate_prediction'):
+                        pred, lower, upper = miner.generate_prediction(data)
+                    elif hasattr(miner, 'predict_price'):
+                        pred, lower, upper = miner.predict_price(data)
+                    else:
+                        # Fallback
+                        latest_price = float(data['ReferenceRateUSD'].iloc[-1])
+                        pred, lower, upper = latest_price, latest_price * 0.95, latest_price * 1.05
+                    
+                    strategy_predictions[strategy_name] = pred
+                    strategy_intervals[strategy_name] = (lower, upper)
+                    
+            except Exception as e:
+                bt.logging.error(f"Strategy {strategy_name} failed: {e}")
+                # Fallback for failed strategy
+                latest_price = float(data['ReferenceRateUSD'].iloc[-1])
+                strategy_predictions[strategy_name] = latest_price
+                strategy_intervals[strategy_name] = (latest_price * 0.95, latest_price * 1.05)
+        
+        # Calculate ensemble prediction
+        weighted_prediction = sum(strategy_predictions[strategy] * adaptive_weights.get(strategy, 0) 
+                                for strategy in strategy_predictions.keys())
+        
+        # Calculate diversity and uncertainty
+        diversity = self.calculate_prediction_diversity(strategy_predictions)
+        uncertainty = self.calculate_prediction_uncertainty(strategy_predictions, adaptive_weights)
+        
+        # Apply uncertainty adjustments
+        point_estimate, lower_bound, upper_bound = self.apply_uncertainty_adjustment(
+            weighted_prediction, uncertainty, diversity
+        )
+        
+        # Log ensemble details
+        weights_str = ", ".join([f"{name}: {weight:.3f}" for name, weight in adaptive_weights.items()])
+        bt.logging.info(f"Ensemble weights: {weights_str}")
+        bt.logging.info(f"Diversity: {diversity:.3f}, Uncertainty: {uncertainty:.3f}")
+        
+        return point_estimate, lower_bound, upper_bound
+
+
+async def forward(synapse: Challenge, cm: CMData) -> Challenge:
+    """Advanced ensemble-based forward function."""
+    start_time = time.perf_counter()
+    
+    # Get assets to predict
+    assets = [asset.lower() for asset in synapse.assets] if synapse.assets else ["btc"]
+    
+    bt.logging.info(f"🎯 Advanced Ensemble Miner: Predicting {assets} at {synapse.timestamp}")
+    
+    predictions = {}
+    intervals = {}
+    
+    # Initialize advanced ensemble miner
+    ensemble_miner = AdvancedEnsembleMiner()
+    
+    for asset in assets:
+        try:
+            # Get historical data (4 hours for comprehensive analysis)
+            end_time = to_datetime(synapse.timestamp)
+            start_time_data = get_before(synapse.timestamp, hours=4, minutes=0, seconds=0)
+            
+            # Fetch data
+            data = cm.get_CM_ReferenceRate(
+                assets=[asset],
+                start=to_str(start_time_data),
+                end=to_str(end_time),
+                frequency="1s"
+            )
+            
+            if data.empty or len(data) < 100:
+                bt.logging.warning(f"Insufficient data for {asset}, using fallback")
+                latest_price = float(data['ReferenceRateUSD'].iloc[-1]) if not data.empty else 50000.0
+                predictions[asset] = latest_price
+                intervals[asset] = [latest_price * 0.95, latest_price * 1.05]
+                continue
+            
+            # Generate advanced ensemble prediction
+            point_estimate, lower_bound, upper_bound = ensemble_miner.ensemble_predict(data, asset)
+            
+            predictions[asset] = point_estimate
+            intervals[asset] = [lower_bound, upper_bound]
+            
+            bt.logging.info(
+                f"🎯 {asset}: Advanced Ensemble Prediction=${point_estimate:.2f} | "
+                f"Interval=[${lower_bound:.2f}, ${upper_bound:.2f}]"
+            )
+            
+        except Exception as e:
+            bt.logging.error(f"Advanced ensemble prediction failed for {asset}: {e}")
+            # Fallback to latest price
+            if not data.empty:
+                latest_price = float(data['ReferenceRateUSD'].iloc[-1])
+                predictions[asset] = latest_price
+                intervals[asset] = [latest_price * 0.95, latest_price * 1.05]
+    
+    # Set synapse results
+    synapse.predictions = predictions
+    synapse.intervals = intervals
+    
+    total_time = time.perf_counter() - start_time
+    bt.logging.debug(f"⏱️ Advanced Ensemble Miner took: {total_time:.3f} seconds")
+    
+    return synapse
