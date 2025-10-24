@@ -16,6 +16,7 @@ from precog.miners.ml_miner import MLMiner
 from precog.miners.technical_analysis_miner import TechnicalAnalysisMiner
 from precog.miners.lstm_miner import LSTMMiner
 from precog.miners.sentiment_miner import SentimentMiner
+from precog.utils.real_time_prices import get_current_market_prices
 
 
 class MetaLearner:
@@ -358,19 +359,24 @@ async def forward(synapse: Challenge, cm: CMData) -> Challenge:
                 frequency="1s"
             )
             
-            # If data is empty or insufficient, use current market prices
+            # If data is empty or insufficient, fetch real-time market prices
             if data.empty or len(data) < 100:
-                bt.logging.warning(f"No data available for {asset}, using current market prices")
-                current_market_prices = {
-                    'btc': 110843.0,     # Current BTC price: $110,843
-                    'eth': 3943.20,      # Current ETH price: $3,943.20
-                    'tao_bittensor': 400.0,  # Current TAO price: ~$400
-                    'tao': 400.0
-                }
-                market_price = current_market_prices.get(asset.lower(), 50000.0)
-                predictions[asset] = market_price
-                intervals[asset] = [market_price * 0.95, market_price * 1.05]
-                bt.logging.info(f"Using current market price for {asset}: ${market_price:,.2f}")
+                bt.logging.warning(f"No data available for {asset}, fetching real-time market prices")
+                try:
+                    # Get real-time prices from multiple APIs
+                    real_time_prices = get_current_market_prices([asset])
+                    market_price = real_time_prices.get(asset.lower(), 50000.0)
+                    predictions[asset] = market_price
+                    intervals[asset] = [market_price * 0.95, market_price * 1.05]
+                    bt.logging.info(f"Using real-time market price for {asset}: ${market_price:,.2f}")
+                except Exception as e:
+                    bt.logging.error(f"Failed to fetch real-time price for {asset}: {e}")
+                    # Fallback to conservative estimates
+                    fallback_prices = {'btc': 65000.0, 'eth': 3500.0, 'tao': 400.0, 'tao_bittensor': 400.0}
+                    market_price = fallback_prices.get(asset.lower(), 50000.0)
+                    predictions[asset] = market_price
+                    intervals[asset] = [market_price * 0.95, market_price * 1.05]
+                    bt.logging.warning(f"Using fallback price for {asset}: ${market_price:,.2f}")
                 continue
             
             # Enhanced data quality validation
@@ -403,16 +409,34 @@ async def forward(synapse: Challenge, cm: CMData) -> Challenge:
             # Apply aggressive price validation and correction
             corrected_price = ensemble_miner.meta_learner.validate_prediction_price(asset, point_estimate, data)
             
-            # Additional validation for unrealistic prices (updated for current market)
-            if asset.lower() == 'btc' and (corrected_price < 80000 or corrected_price > 150000):
-                bt.logging.warning(f"BTC price {corrected_price:.2f} is unrealistic, using current market price")
-                corrected_price = float(data['ReferenceRateUSD'].iloc[-1]) if not data.empty else 110843.0
-            elif asset.lower() == 'eth' and (corrected_price < 3000 or corrected_price > 6000):
-                bt.logging.warning(f"ETH price {corrected_price:.2f} is unrealistic, using current market price")
-                corrected_price = float(data['ReferenceRateUSD'].iloc[-1]) if not data.empty else 3943.20
-            elif asset.lower() in ['tao', 'tao_bittensor'] and (corrected_price < 200 or corrected_price > 1000):
-                bt.logging.warning(f"TAO price {corrected_price:.2f} is unrealistic, using current market price")
-                corrected_price = float(data['ReferenceRateUSD'].iloc[-1]) if not data.empty else 400.0
+            # Additional validation for unrealistic prices using real-time market data
+            if asset.lower() == 'btc' and (corrected_price < 50000 or corrected_price > 200000):
+                bt.logging.warning(f"BTC price {corrected_price:.2f} is unrealistic, fetching real-time market price")
+                try:
+                    real_time_prices = get_current_market_prices(['btc'])
+                    corrected_price = real_time_prices.get('btc', 65000.0)
+                    bt.logging.info(f"Using real-time BTC price: ${corrected_price:,.2f}")
+                except Exception as e:
+                    bt.logging.error(f"Failed to fetch real-time BTC price: {e}")
+                    corrected_price = 65000.0  # Conservative fallback
+            elif asset.lower() == 'eth' and (corrected_price < 2000 or corrected_price > 10000):
+                bt.logging.warning(f"ETH price {corrected_price:.2f} is unrealistic, fetching real-time market price")
+                try:
+                    real_time_prices = get_current_market_prices(['eth'])
+                    corrected_price = real_time_prices.get('eth', 3500.0)
+                    bt.logging.info(f"Using real-time ETH price: ${corrected_price:,.2f}")
+                except Exception as e:
+                    bt.logging.error(f"Failed to fetch real-time ETH price: {e}")
+                    corrected_price = 3500.0  # Conservative fallback
+            elif asset.lower() in ['tao', 'tao_bittensor'] and (corrected_price < 100 or corrected_price > 2000):
+                bt.logging.warning(f"TAO price {corrected_price:.2f} is unrealistic, fetching real-time market price")
+                try:
+                    real_time_prices = get_current_market_prices(['tao'])
+                    corrected_price = real_time_prices.get('tao', 400.0)
+                    bt.logging.info(f"Using real-time TAO price: ${corrected_price:,.2f}")
+                except Exception as e:
+                    bt.logging.error(f"Failed to fetch real-time TAO price: {e}")
+                    corrected_price = 400.0  # Conservative fallback
             
             predictions[asset] = corrected_price
             intervals[asset] = [corrected_price * 0.95, corrected_price * 1.05]
