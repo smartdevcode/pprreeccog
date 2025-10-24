@@ -40,19 +40,25 @@ class RealTimePriceFetcher:
         # Try multiple sources for reliability
         try:
             # Method 1: CoinGecko API (free, no API key)
+            bt.logging.debug(f"Attempting to fetch prices from CoinGecko for: {assets}")
             prices = self._fetch_from_coingecko(assets)
             if prices:
                 bt.logging.info(f"✅ Fetched prices from CoinGecko: {prices}")
             else:
+                bt.logging.debug("CoinGecko returned empty prices, trying CoinCap")
                 # Method 2: CoinCap API (free, no API key)
                 prices = self._fetch_from_coincap(assets)
                 if prices:
                     bt.logging.info(f"✅ Fetched prices from CoinCap: {prices}")
                 else:
+                    bt.logging.debug("CoinCap returned empty prices, trying Binance")
                     # Method 3: Binance API (free, no API key)
                     prices = self._fetch_from_binance(assets)
                     if prices:
                         bt.logging.info(f"✅ Fetched prices from Binance: {prices}")
+                    else:
+                        bt.logging.warning("All APIs returned empty prices, using fallback")
+                        prices = self._get_fallback_prices(assets)
                         
         except Exception as e:
             bt.logging.error(f"Failed to fetch real-time prices: {e}")
@@ -164,10 +170,10 @@ class RealTimePriceFetcher:
     def _get_fallback_prices(self, assets: list) -> Dict[str, float]:
         """Fallback prices when all APIs fail."""
         fallback_prices = {
-            'btc': 65000.0,      # Conservative fallback
-            'eth': 3500.0,       # Conservative fallback
-            'tao': 400.0,        # Conservative fallback
-            'tao_bittensor': 400.0
+            'btc': 110219.60,    # Current market price fallback
+            'eth': 3907.73,      # Current market price fallback
+            'tao': 388.35,       # Current market price fallback
+            'tao_bittensor': 388.35
         }
         
         return {asset.lower(): fallback_prices.get(asset.lower(), 50000.0) for asset in assets}
