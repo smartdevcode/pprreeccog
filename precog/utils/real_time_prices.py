@@ -199,40 +199,53 @@ class RealTimePriceFetcher:
             # Initialize CoinMetrics client
             cm = CMData()
             
-            # Map assets to CoinMetrics symbols
+            # Map assets to CoinMetrics symbols (use exact CoinMetrics asset names)
             asset_mapping = {
                 'btc': 'btc',
                 'eth': 'eth',
-                'tao': 'tao_bittensor',
-                'tao_bittensor': 'tao_bittensor'
+                'tao': 'tao',
+                'tao_bittensor': 'tao'
             }
             
             prices = {}
             
-            # Get latest prices from CoinMetrics (last 1 minute of data)
+            # Get latest prices from CoinMetrics (last 5 minutes of data to ensure we get data)
             end_time = datetime.now()
-            start_time = end_time - timedelta(minutes=1)
+            start_time = end_time - timedelta(minutes=5)
             
             for asset in assets:
                 cm_asset = asset_mapping.get(asset.lower(), asset.lower())
                 
                 try:
-                    # Fetch latest reference rate data
-                    data = cm.get_CM_ReferenceRate(
-                        assets=[cm_asset],
-                        start=start_time,
-                        end=end_time,
-                        frequency="1s",
-                        use_cache=False
-                    )
+                    bt.logging.debug(f"Fetching CoinMetrics data for {asset} (CM asset: {cm_asset})")
                     
-                    if not data.empty:
+                    # Try different frequencies if 1s doesn't work
+                    frequencies = ["1s", "1m", "5m"]
+                    data = None
+                    
+                    for freq in frequencies:
+                        try:
+                            data = cm.get_CM_ReferenceRate(
+                                assets=[cm_asset],
+                                start=start_time,
+                                end=end_time,
+                                frequency=freq,
+                                use_cache=False
+                            )
+                            if not data.empty:
+                                bt.logging.debug(f"✅ Got data with {freq} frequency")
+                                break
+                        except Exception as e:
+                            bt.logging.debug(f"Failed with {freq} frequency: {e}")
+                            continue
+                    
+                    if data is not None and not data.empty:
                         # Get the latest price
                         latest_price = float(data['ReferenceRateUSD'].iloc[-1])
                         prices[asset.lower()] = latest_price
                         bt.logging.debug(f"✅ Fetched {asset.upper()} price from CoinMetrics: ${latest_price:.2f}")
                     else:
-                        bt.logging.warning(f"No CoinMetrics data for {asset}")
+                        bt.logging.warning(f"No CoinMetrics data for {asset} (CM asset: {cm_asset})")
                         
                 except Exception as e:
                     bt.logging.debug(f"Failed to fetch {asset} price from CoinMetrics: {e}")
