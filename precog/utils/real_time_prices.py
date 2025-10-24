@@ -21,6 +21,11 @@ class RealTimePriceFetcher:
         """Get current prices for multiple assets from reliable sources."""
         current_time = time.time()
         
+        # Always fetch fresh prices for ETH to ensure variation
+        if 'eth' in [asset.lower() for asset in assets]:
+            bt.logging.debug("Forcing fresh price fetch for ETH")
+            self.cache.pop('eth', None)  # Clear ETH from cache
+        
         # Use cache if recent enough
         if current_time - self.last_update < self.cache_timeout and self.cache:
             bt.logging.debug("Using cached prices")

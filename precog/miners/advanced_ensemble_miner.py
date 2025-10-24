@@ -422,6 +422,9 @@ async def forward(synapse: Challenge, cm: CMData) -> Challenge:
             elif asset.lower() == 'eth' and (corrected_price < 2000 or corrected_price > 10000):
                 bt.logging.warning(f"ETH price {corrected_price:.2f} is unrealistic, fetching real-time market price")
                 try:
+                    # Force fresh price fetch by clearing cache for ETH
+                    from precog.utils.real_time_prices import price_fetcher
+                    price_fetcher.cache.pop('eth', None)  # Clear ETH from cache
                     real_time_prices = get_current_market_prices(['eth'])
                     corrected_price = real_time_prices.get('eth', 3500.0)
                     bt.logging.info(f"Using real-time ETH price: ${corrected_price:,.2f}")
