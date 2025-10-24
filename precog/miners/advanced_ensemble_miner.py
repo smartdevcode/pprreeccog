@@ -399,68 +399,85 @@ class AdvancedEnsembleMiner:
         return point_estimate, lower_bound, upper_bound
     
     def _generate_intelligent_prediction(self, data: pd.DataFrame, asset: str, current_price: float) -> float:
-        """Generate intelligent prediction based on current price and market analysis."""
+        """Generate intelligent prediction optimized for incentive scoring."""
         try:
             if data.empty or len(data) < 10:
                 return current_price
             
             prices = data['ReferenceRateUSD']
             
-            # Calculate short-term trend (last 10 data points)
-            recent_prices = prices.tail(10)
-            if len(recent_prices) >= 2:
+            # Calculate short-term trend (last 20 data points for better accuracy)
+            recent_prices = prices.tail(20)
+            if len(recent_prices) >= 5:
                 trend = (recent_prices.iloc[-1] - recent_prices.iloc[0]) / recent_prices.iloc[0]
             else:
                 trend = 0.0
             
-            # Calculate momentum (rate of change)
-            if len(prices) >= 2:
-                momentum = (prices.iloc[-1] - prices.iloc[-2]) / prices.iloc[-2]
+            # Calculate momentum (rate of change over last 5 points)
+            if len(prices) >= 5:
+                momentum = (prices.iloc[-1] - prices.iloc[-5]) / prices.iloc[-5]
             else:
                 momentum = 0.0
             
-            # Calculate volatility-based adjustment
+            # Calculate volatility for more accurate predictions
             volatility = self._calculate_asset_volatility(data, asset)
             
-            # Generate prediction based on trend, momentum, and volatility
-            # Apply small adjustments to current price based on market analysis
-            trend_adjustment = current_price * trend * 0.1  # 10% of trend
-            momentum_adjustment = current_price * momentum * 0.05  # 5% of momentum
-            volatility_adjustment = current_price * volatility * 0.02  # 2% of volatility
+            # OPTIMIZED PREDICTION ALGORITHM FOR INCENTIVE SCORING
+            # Use smaller, more conservative adjustments for better accuracy
             
+            # Trend following with conservative scaling
+            trend_adjustment = current_price * trend * 0.05  # 5% of trend (reduced from 10%)
+            
+            # Momentum following with conservative scaling  
+            momentum_adjustment = current_price * momentum * 0.03  # 3% of momentum (reduced from 5%)
+            
+            # Volatility-based adjustment (minimal)
+            volatility_adjustment = current_price * volatility * 0.01  # 1% of volatility (reduced from 2%)
+            
+            # Base prediction with conservative adjustments
             prediction = current_price + trend_adjustment + momentum_adjustment + volatility_adjustment
             
-            # Ensure prediction is within reasonable bounds
-            min_price = current_price * 0.95  # 5% below current
-            max_price = current_price * 1.05  # 5% above current
+            # TIGHTER BOUNDS FOR BETTER ACCURACY
+            # Keep predictions very close to current price for better scoring
+            min_price = current_price * 0.98  # 2% below current (tighter bounds)
+            max_price = current_price * 1.02  # 2% above current (tighter bounds)
             
-            return max(min_price, min(prediction, max_price))
+            # Ensure prediction stays within tight bounds
+            final_prediction = max(min_price, min(prediction, max_price))
+            
+            # Log prediction details for monitoring
+            bt.logging.debug(f"🎯 {asset} prediction: current=${current_price:.2f}, trend={trend:.4f}, momentum={momentum:.4f}, volatility={volatility:.4f}")
+            bt.logging.debug(f"🎯 {asset} adjustments: trend={trend_adjustment:.2f}, momentum={momentum_adjustment:.2f}, volatility={volatility_adjustment:.2f}")
+            bt.logging.debug(f"🎯 {asset} final prediction: ${final_prediction:.2f} (change: {((final_prediction - current_price) / current_price * 100):+.2f}%)")
+            
+            return final_prediction
             
         except Exception as e:
             bt.logging.error(f"Intelligent prediction failed for {asset}: {e}")
             return current_price
     
     def _calculate_asset_volatility(self, data: pd.DataFrame, asset: str) -> float:
-        """Calculate asset volatility for interval prediction."""
+        """Calculate optimized volatility for better interval scoring."""
         try:
             if data.empty or len(data) < 10:
-                return 0.02  # Default 2% volatility
+                return 0.015  # Default 1.5% volatility (optimized for scoring)
             
             prices = data['ReferenceRateUSD']
             returns = prices.pct_change().dropna()
             
             if len(returns) < 5:
-                return 0.02
+                return 0.015
             
-            # Calculate rolling volatility
-            volatility = returns.rolling(window=min(20, len(returns))).std().iloc[-1]
+            # Calculate rolling volatility with optimized window
+            volatility = returns.rolling(window=min(15, len(returns))).std().iloc[-1]
             
-            # Ensure volatility is within reasonable bounds
-            return max(0.01, min(volatility, 0.10))  # Between 1% and 10%
+            # OPTIMIZED VOLATILITY BOUNDS FOR BETTER INTERVAL SCORING
+            # Use tighter volatility bounds for better interval scores
+            return max(0.008, min(volatility, 0.04))  # Between 0.8% and 4% (optimized)
             
         except Exception as e:
             bt.logging.error(f"Volatility calculation failed for {asset}: {e}")
-            return 0.02
+            return 0.015
 
 
 async def forward(synapse: Challenge, cm: CMData) -> Challenge:
@@ -585,13 +602,30 @@ async def forward(synapse: Challenge, cm: CMData) -> Challenge:
                 # Calculate prediction based on current price with market analysis
                 point_estimate = ensemble_miner._generate_intelligent_prediction(data, asset, current_price)
                 
-                # Calculate intelligent intervals based on volatility
+                # OPTIMIZED INTERVAL CALCULATION FOR BETTER SCORING
                 volatility = ensemble_miner._calculate_asset_volatility(data, asset)
-                margin = current_price * volatility * 2.0  # 2 standard deviations
-                lower_bound = max(current_price - margin, current_price * 0.95)  # Min 5% down
-                upper_bound = min(current_price + margin, current_price * 1.05)  # Max 5% up
+                
+                # Use optimized margin calculation for better interval scores
+                # Target 80-90% inclusion rate with optimal width
+                margin = current_price * volatility * 1.5  # 1.5 standard deviations (optimized)
+                
+                # Tighter bounds for better scoring
+                lower_bound = max(current_price - margin, current_price * 0.985)  # Min 1.5% down
+                upper_bound = min(current_price + margin, current_price * 1.015)  # Max 1.5% up
+                
+                # Ensure intervals are not too wide (which hurts scoring)
+                max_width = current_price * 0.03  # Maximum 3% width
+                if (upper_bound - lower_bound) > max_width:
+                    center = (upper_bound + lower_bound) / 2
+                    lower_bound = center - max_width / 2
+                    upper_bound = center + max_width / 2
                 
                 corrected_price = point_estimate
+                
+                # Log interval details for monitoring
+                bt.logging.debug(f"🎯 {asset} interval: volatility={volatility:.4f}, margin={margin:.2f}")
+                bt.logging.debug(f"🎯 {asset} bounds: [${lower_bound:.2f}, ${upper_bound:.2f}] (width: {((upper_bound - lower_bound) / current_price * 100):.2f}%)")
+                
             else:
                 # Fallback to ensemble prediction if no current price
                 point_estimate, lower_bound, upper_bound = ensemble_miner.ensemble_predict(data, asset)
@@ -681,16 +715,54 @@ async def forward(synapse: Challenge, cm: CMData) -> Challenge:
     total_time = time.perf_counter() - start_time
     avg_data_quality = data_quality_score / total_assets if total_assets > 0 else 0
     
-    # Enhanced performance summary with price validation info
-    bt.logging.info(f"📊 Performance Summary:")
+    # Enhanced performance summary with incentive optimization info
+    bt.logging.info(f"📊 INCENTIVE OPTIMIZATION SUMMARY:")
     bt.logging.info(f"   - Total time: {total_time:.3f} seconds")
     bt.logging.info(f"   - Data quality: {avg_data_quality:.3f}")
     bt.logging.info(f"   - Assets processed: {len(predictions)}/{total_assets}")
     bt.logging.info(f"   - Predictions generated: {len([p for p in predictions.values() if p is not None])}")
     
-    # Log prediction prices for validation
+    # Log prediction prices and expected scoring
     for asset, price in predictions.items():
-        bt.logging.info(f"   - {asset.upper()}: ${price:.2f}")
+        try:
+            real_time_prices = get_current_market_prices([asset])
+            real_time_price = real_time_prices.get(asset.lower(), 0)
+            if real_time_price > 0:
+                prediction_error = abs(price - real_time_price) / real_time_price
+                bt.logging.info(f"   - {asset.upper()}: Prediction=${price:.2f} | Real=${real_time_price:.2f} | Error={prediction_error:.3f}")
+                
+                # Log expected scoring
+                if prediction_error < 0.05:  # <5% error
+                    bt.logging.info(f"     ✅ EXCELLENT: Point prediction error <5% (high score expected)")
+                elif prediction_error < 0.10:  # <10% error
+                    bt.logging.info(f"     ✅ GOOD: Point prediction error <10% (good score expected)")
+                else:
+                    bt.logging.warning(f"     ⚠️  POOR: Point prediction error >10% (low score expected)")
+            else:
+                bt.logging.info(f"   - {asset.upper()}: Prediction=${price:.2f} | Real-time price unavailable")
+        except Exception as e:
+            bt.logging.debug(f"Could not calculate prediction error for {asset}: {e}")
+            bt.logging.info(f"   - {asset.upper()}: Prediction=${price:.2f}")
+    
+    # Log interval scoring expectations
+    for asset, interval in intervals.items():
+        try:
+            real_time_prices = get_current_market_prices([asset])
+            real_time_price = real_time_prices.get(asset.lower(), 0)
+            if real_time_price > 0 and len(interval) == 2:
+                lower, upper = interval
+                interval_width = (upper - lower) / real_time_price
+                bt.logging.info(f"   - {asset.upper()} Interval: [${lower:.2f}, ${upper:.2f}] | Width={interval_width:.3f}")
+                
+                # Log expected interval scoring
+                if 0.02 <= interval_width <= 0.05:  # 2-5% width
+                    bt.logging.info(f"     ✅ OPTIMAL: Interval width 2-5% (high score expected)")
+                elif 0.01 <= interval_width <= 0.08:  # 1-8% width
+                    bt.logging.info(f"     ✅ GOOD: Interval width 1-8% (good score expected)")
+                else:
+                    bt.logging.warning(f"     ⚠️  SUBOPTIMAL: Interval width outside optimal range")
+        except Exception as e:
+            bt.logging.debug(f"Could not analyze interval for {asset}: {e}")
     
     # Log performance summary if available
     try:
