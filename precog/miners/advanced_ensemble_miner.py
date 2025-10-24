@@ -397,6 +397,70 @@ class AdvancedEnsembleMiner:
         bt.logging.info(f"Diversity: {diversity:.3f}, Uncertainty: {uncertainty:.3f}")
         
         return point_estimate, lower_bound, upper_bound
+    
+    def _generate_intelligent_prediction(self, data: pd.DataFrame, asset: str, current_price: float) -> float:
+        """Generate intelligent prediction based on current price and market analysis."""
+        try:
+            if data.empty or len(data) < 10:
+                return current_price
+            
+            prices = data['ReferenceRateUSD']
+            
+            # Calculate short-term trend (last 10 data points)
+            recent_prices = prices.tail(10)
+            if len(recent_prices) >= 2:
+                trend = (recent_prices.iloc[-1] - recent_prices.iloc[0]) / recent_prices.iloc[0]
+            else:
+                trend = 0.0
+            
+            # Calculate momentum (rate of change)
+            if len(prices) >= 2:
+                momentum = (prices.iloc[-1] - prices.iloc[-2]) / prices.iloc[-2]
+            else:
+                momentum = 0.0
+            
+            # Calculate volatility-based adjustment
+            volatility = self._calculate_asset_volatility(data, asset)
+            
+            # Generate prediction based on trend, momentum, and volatility
+            # Apply small adjustments to current price based on market analysis
+            trend_adjustment = current_price * trend * 0.1  # 10% of trend
+            momentum_adjustment = current_price * momentum * 0.05  # 5% of momentum
+            volatility_adjustment = current_price * volatility * 0.02  # 2% of volatility
+            
+            prediction = current_price + trend_adjustment + momentum_adjustment + volatility_adjustment
+            
+            # Ensure prediction is within reasonable bounds
+            min_price = current_price * 0.95  # 5% below current
+            max_price = current_price * 1.05  # 5% above current
+            
+            return max(min_price, min(prediction, max_price))
+            
+        except Exception as e:
+            bt.logging.error(f"Intelligent prediction failed for {asset}: {e}")
+            return current_price
+    
+    def _calculate_asset_volatility(self, data: pd.DataFrame, asset: str) -> float:
+        """Calculate asset volatility for interval prediction."""
+        try:
+            if data.empty or len(data) < 10:
+                return 0.02  # Default 2% volatility
+            
+            prices = data['ReferenceRateUSD']
+            returns = prices.pct_change().dropna()
+            
+            if len(returns) < 5:
+                return 0.02
+            
+            # Calculate rolling volatility
+            volatility = returns.rolling(window=min(20, len(returns))).std().iloc[-1]
+            
+            # Ensure volatility is within reasonable bounds
+            return max(0.01, min(volatility, 0.10))  # Between 1% and 10%
+            
+        except Exception as e:
+            bt.logging.error(f"Volatility calculation failed for {asset}: {e}")
+            return 0.02
 
 
 async def forward(synapse: Challenge, cm: CMData) -> Challenge:
@@ -508,11 +572,30 @@ async def forward(synapse: Challenge, cm: CMData) -> Challenge:
                 intervals[asset] = [latest_price * 0.95, latest_price * 1.05]
                 continue
             
-            # Generate advanced ensemble prediction for all assets
-            point_estimate, lower_bound, upper_bound = ensemble_miner.ensemble_predict(data, asset)
+            # Get current market price as baseline
+            try:
+                real_time_prices = get_current_market_prices([asset])
+                current_price = real_time_prices.get(asset.lower(), 0)
+            except Exception as e:
+                bt.logging.error(f"Failed to get current price for {asset}: {e}")
+                current_price = 50000.0 if asset.lower() == 'btc' else 3000.0 if asset.lower() == 'eth' else 400.0
             
-            # Apply price validation and correction
-            corrected_price = ensemble_miner.meta_learner.validate_prediction_price(asset, point_estimate, data)
+            # Generate intelligent prediction based on current price and market analysis
+            if current_price > 0:
+                # Calculate prediction based on current price with market analysis
+                point_estimate = ensemble_miner._generate_intelligent_prediction(data, asset, current_price)
+                
+                # Calculate intelligent intervals based on volatility
+                volatility = ensemble_miner._calculate_asset_volatility(data, asset)
+                margin = current_price * volatility * 2.0  # 2 standard deviations
+                lower_bound = max(current_price - margin, current_price * 0.95)  # Min 5% down
+                upper_bound = min(current_price + margin, current_price * 1.05)  # Max 5% up
+                
+                corrected_price = point_estimate
+            else:
+                # Fallback to ensemble prediction if no current price
+                point_estimate, lower_bound, upper_bound = ensemble_miner.ensemble_predict(data, asset)
+                corrected_price = point_estimate
             
             # Log the actual prediction vs real-time price for comparison
             try:
