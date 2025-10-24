@@ -42,15 +42,20 @@ class RealTimePriceFetcher:
         
         prices = {}
         
-        # Use only Binance API to avoid rate limiting issues
+        # Use CoinMetrics as primary source, fallback to Binance
         try:
-            bt.logging.info(f"🔄 Making API call to Binance for: {assets}")
-            prices = self._fetch_from_binance(assets)
+            bt.logging.info(f"🔄 Making API call to CoinMetrics for: {assets}")
+            prices = self._fetch_from_coinmetrics(assets)
             if prices:
-                bt.logging.info(f"✅ Successfully fetched fresh prices from Binance: {prices}")
+                bt.logging.info(f"✅ Successfully fetched fresh prices from CoinMetrics: {prices}")
             else:
-                bt.logging.warning("Binance returned empty prices, using fallback")
-                prices = self._get_fallback_prices(assets)
+                bt.logging.warning("CoinMetrics returned empty prices, trying Binance")
+                prices = self._fetch_from_binance(assets)
+                if prices:
+                    bt.logging.info(f"✅ Successfully fetched fresh prices from Binance: {prices}")
+                else:
+                    bt.logging.warning("Both CoinMetrics and Binance failed, using fallback")
+                    prices = self._get_fallback_prices(assets)
                         
         except Exception as e:
             bt.logging.error(f"Failed to fetch real-time prices: {e}")
@@ -167,12 +172,12 @@ class RealTimePriceFetcher:
                     
                     if 'price' in data:
                         prices[asset.lower()] = float(data['price'])
-                        bt.logging.debug(f"✅ Fetched {asset.upper()} price: ${prices[asset.lower()]:.2f}")
+                        bt.logging.debug(f"✅ Fetched {asset.upper()} price from Binance: ${prices[asset.lower()]:.2f}")
                     else:
                         bt.logging.warning(f"No price data for {asset}")
                         
                 except Exception as e:
-                    bt.logging.debug(f"Failed to fetch {asset} price: {e}")
+                    bt.logging.debug(f"Failed to fetch {asset} price from Binance: {e}")
                     continue
                 
                 # Small delay between requests to avoid rate limiting
@@ -183,6 +188,60 @@ class RealTimePriceFetcher:
             
         except Exception as e:
             bt.logging.debug(f"Binance API failed: {e}")
+            return {}
+    
+    def _fetch_from_coinmetrics(self, assets: list) -> Dict[str, float]:
+        """Fetch latest prices from CoinMetrics API."""
+        try:
+            from precog.utils.cm_data import CMData
+            from datetime import datetime, timedelta
+            
+            # Initialize CoinMetrics client
+            cm = CMData()
+            
+            # Map assets to CoinMetrics symbols
+            asset_mapping = {
+                'btc': 'btc',
+                'eth': 'eth',
+                'tao': 'tao_bittensor',
+                'tao_bittensor': 'tao_bittensor'
+            }
+            
+            prices = {}
+            
+            # Get latest prices from CoinMetrics (last 1 minute of data)
+            end_time = datetime.now()
+            start_time = end_time - timedelta(minutes=1)
+            
+            for asset in assets:
+                cm_asset = asset_mapping.get(asset.lower(), asset.lower())
+                
+                try:
+                    # Fetch latest reference rate data
+                    data = cm.get_CM_ReferenceRate(
+                        assets=[cm_asset],
+                        start=start_time,
+                        end=end_time,
+                        frequency="1s",
+                        use_cache=False
+                    )
+                    
+                    if not data.empty:
+                        # Get the latest price
+                        latest_price = float(data['ReferenceRateUSD'].iloc[-1])
+                        prices[asset.lower()] = latest_price
+                        bt.logging.debug(f"✅ Fetched {asset.upper()} price from CoinMetrics: ${latest_price:.2f}")
+                    else:
+                        bt.logging.warning(f"No CoinMetrics data for {asset}")
+                        
+                except Exception as e:
+                    bt.logging.debug(f"Failed to fetch {asset} price from CoinMetrics: {e}")
+                    continue
+            
+            return prices
+            
+        except Exception as e:
+            bt.logging.debug(f"CoinMetrics API failed: {e}")
             return {}
     
     def _get_fallback_prices(self, assets: list) -> Dict[str, float]:
@@ -237,7 +296,10 @@ class RealTimePriceFetcher:
         """Fetch prices for all assets."""
         try:
             bt.logging.info(f"🔄 Background fetching prices for all assets: {self.all_assets}")
-            prices = self._fetch_from_binance(self.all_assets)
+            prices = self._fetch_from_coinmetrics(self.all_assets)
+            if not prices:
+                bt.logging.warning("CoinMetrics failed, trying Binance for background fetch")
+                prices = self._fetch_from_binance(self.all_assets)
             if prices:
                 # Force update cache and timestamp
                 self.cache = prices.copy()
