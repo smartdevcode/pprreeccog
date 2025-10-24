@@ -508,22 +508,20 @@ async def forward(synapse: Challenge, cm: CMData) -> Challenge:
                 intervals[asset] = [latest_price * 0.95, latest_price * 1.05]
                 continue
             
-            # For ETH and TAO, always use real-time prices instead of ensemble prediction
-            if asset.lower() in ['eth', 'tao', 'tao_bittensor']:
-                try:
-                    bt.logging.info(f"Using real-time {asset.upper()} price instead of ensemble prediction")
-                    real_time_prices = get_current_market_prices([asset])
-                    corrected_price = real_time_prices.get(asset.lower(), 3907.0 if asset.lower() == 'eth' else 400.0)
-                    bt.logging.info(f"Using real-time {asset.upper()} price: ${corrected_price:,.2f}")
-                except Exception as e:
-                    bt.logging.error(f"Failed to fetch real-time {asset.upper()} price: {e}")
-                    corrected_price = 3907.0 if asset.lower() == 'eth' else 400.0  # Conservative fallback
-            else:
-                # Generate advanced ensemble prediction for other assets
-                point_estimate, lower_bound, upper_bound = ensemble_miner.ensemble_predict(data, asset)
-                
-                # Apply aggressive price validation and correction
-                corrected_price = ensemble_miner.meta_learner.validate_prediction_price(asset, point_estimate, data)
+            # Generate advanced ensemble prediction for all assets
+            point_estimate, lower_bound, upper_bound = ensemble_miner.ensemble_predict(data, asset)
+            
+            # Apply price validation and correction
+            corrected_price = ensemble_miner.meta_learner.validate_prediction_price(asset, point_estimate, data)
+            
+            # Log the actual prediction vs real-time price for comparison
+            try:
+                real_time_prices = get_current_market_prices([asset])
+                real_time_price = real_time_prices.get(asset.lower(), 0)
+                if real_time_price > 0:
+                    bt.logging.info(f"🎯 {asset.upper()} Prediction: ${corrected_price:,.2f} | Real-time: ${real_time_price:,.2f} | Difference: {((corrected_price - real_time_price) / real_time_price * 100):+.2f}%")
+            except Exception as e:
+                bt.logging.debug(f"Could not compare prediction with real-time price: {e}")
             
             # Additional validation for unrealistic prices using real-time market data
             if asset.lower() == 'btc' and (corrected_price < 50000 or corrected_price > 200000):
@@ -562,11 +560,11 @@ async def forward(synapse: Challenge, cm: CMData) -> Challenge:
                     corrected_price = 400.0  # Conservative fallback
             
             predictions[asset] = corrected_price
-            intervals[asset] = [corrected_price * 0.95, corrected_price * 1.05]
+            intervals[asset] = [lower_bound, upper_bound]
             
             bt.logging.info(
                 f"🎯 {asset}: Advanced Ensemble Prediction=${corrected_price:.2f} | "
-                f"Interval=[${corrected_price * 0.95:.2f}, ${corrected_price * 1.05:.2f}]"
+                f"Interval=[${lower_bound:.2f}, ${upper_bound:.2f}]"
             )
             
             # Track prediction for performance monitoring
@@ -576,9 +574,10 @@ async def forward(synapse: Challenge, cm: CMData) -> Challenge:
                     current_market_prices = get_current_market_prices([asset])
                     if asset in current_market_prices:
                         current_price = current_market_prices[asset]
+                        # Track the actual prediction (before validation) vs real price
                         ensemble_miner.meta_learner.track_prediction_performance(
-                            asset, corrected_price, current_price, 
-                            (corrected_price * 0.95, corrected_price * 1.05), synapse.timestamp
+                            asset, point_estimate, current_price, 
+                            (lower_bound, upper_bound), synapse.timestamp
                         )
                 except Exception as e:
                     bt.logging.debug(f"Performance tracking failed: {e}")
