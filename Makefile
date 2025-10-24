@@ -24,7 +24,7 @@ register:
 	}
 
 miner:
-	pm2 start precog/miners/miner.py --name $(MINER_NAME) --interpreter /root/.pyenv/versions/3.10.9/bin/python \
+	PYTHONPATH=/root/Documents/pprreeccog pm2 start precog/miners/miner.py --name $(MINER_NAME) --interpreter /root/.pyenv/versions/3.10.9/bin/python \
 		-- --neuron.name $(MINER_NAME) \
 		--wallet.name $(COLDKEY) \
 		--wallet.hotkey $(MINER_HOTKEY) \
@@ -38,7 +38,7 @@ miner:
 
 # Advanced Custom Miners
 miner_lstm:
-	pm2 start precog/miners/miner.py --name $(MINER_NAME)_lstm --interpreter /root/.pyenv/versions/3.10.9/bin/python \
+	PYTHONPATH=/root/Documents/pprreeccog pm2 start precog/miners/miner.py --name $(MINER_NAME)_lstm --interpreter /root/.pyenv/versions/3.10.9/bin/python \
 		-- --neuron.name $(MINER_NAME)_lstm \
 		--wallet.name $(COLDKEY) \
 		--wallet.hotkey $(MINER_HOTKEY) \
@@ -51,7 +51,7 @@ miner_lstm:
 		--forward_function lstm_miner
 
 miner_sentiment:
-	pm2 start precog/miners/miner.py --name $(MINER_NAME)_sentiment --interpreter /root/.pyenv/versions/3.10.9/bin/python \
+	PYTHONPATH=/root/Documents/pprreeccog pm2 start precog/miners/miner.py --name $(MINER_NAME)_sentiment --interpreter /root/.pyenv/versions/3.10.9/bin/python \
 		-- --neuron.name $(MINER_NAME)_sentiment \
 		--wallet.name $(COLDKEY) \
 		--wallet.hotkey $(MINER_HOTKEY) \
@@ -64,7 +64,7 @@ miner_sentiment:
 		--forward_function sentiment_miner
 
 miner_advanced_ensemble:
-	pm2 start precog/miners/miner.py --name $(MINER_NAME)_advanced_ensemble --interpreter /root/.pyenv/versions/3.10.9/bin/python \
+	PYTHONPATH=/root/Documents/pprreeccog pm2 start precog/miners/miner.py --name $(MINER_NAME)_advanced_ensemble --interpreter /root/.pyenv/versions/3.10.9/bin/python \
 		-- --neuron.name $(MINER_NAME)_advanced_ensemble \
 		--wallet.name $(COLDKEY) \
 		--wallet.hotkey $(MINER_HOTKEY) \
@@ -77,7 +77,7 @@ miner_advanced_ensemble:
 		--forward_function advanced_ensemble_miner
 
 miner_ensemble:
-	pm2 start precog/miners/miner.py --name $(MINER_NAME)_ensemble --interpreter /root/.pyenv/versions/3.10.9/bin/python \
+	PYTHONPATH=/root/Documents/pprreeccog pm2 start precog/miners/miner.py --name $(MINER_NAME)_ensemble --interpreter /root/.pyenv/versions/3.10.9/bin/python \
 		-- --neuron.name $(MINER_NAME)_ensemble \
 		--wallet.name $(COLDKEY) \
 		--wallet.hotkey $(MINER_HOTKEY) \
@@ -90,7 +90,7 @@ miner_ensemble:
 		--forward_function ensemble_miner
 
 miner_ml:
-	pm2 start precog/miners/miner.py --name $(MINER_NAME)_ml --interpreter /root/.pyenv/versions/3.10.9/bin/python \
+	PYTHONPATH=/root/Documents/pprreeccog pm2 start precog/miners/miner.py --name $(MINER_NAME)_ml --interpreter /root/.pyenv/versions/3.10.9/bin/python \
 		-- --neuron.name $(MINER_NAME)_ml \
 		--wallet.name $(COLDKEY) \
 		--wallet.hotkey $(MINER_HOTKEY) \
@@ -103,7 +103,7 @@ miner_ml:
 		--forward_function ml_miner
 
 miner_technical:
-	pm2 start precog/miners/miner.py --name $(MINER_NAME)_technical --interpreter /root/.pyenv/versions/3.10.9/bin/python \
+	PYTHONPATH=/root/Documents/pprreeccog pm2 start precog/miners/miner.py --name $(MINER_NAME)_technical --interpreter /root/.pyenv/versions/3.10.9/bin/python \
 		-- --neuron.name $(MINER_NAME)_technical \
 		--wallet.name $(COLDKEY) \
 		--wallet.hotkey $(MINER_HOTKEY) \
