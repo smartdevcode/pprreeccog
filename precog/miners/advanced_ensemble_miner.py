@@ -398,16 +398,38 @@ async def forward(synapse: Challenge, cm: CMData) -> Challenge:
             
             if data.empty or len(data) < 100 or data_quality < 0.5:
                 bt.logging.warning(f"Insufficient or poor quality data for {asset}, using fallback")
-                latest_price = float(data['ReferenceRateUSD'].iloc[-1]) if not data.empty else 50000.0
+                # For ETH, always try to fetch real-time prices instead of using fallback
+                if asset.lower() == 'eth':
+                    try:
+                        bt.logging.info(f"Fetching real-time ETH price due to poor data quality")
+                        real_time_prices = get_current_market_prices(['eth'])
+                        latest_price = real_time_prices.get('eth', 3500.0)
+                        bt.logging.info(f"Using real-time ETH price: ${latest_price:,.2f}")
+                    except Exception as e:
+                        bt.logging.error(f"Failed to fetch real-time ETH price: {e}")
+                        latest_price = 3500.0  # Conservative fallback
+                else:
+                    latest_price = float(data['ReferenceRateUSD'].iloc[-1]) if not data.empty else 50000.0
                 predictions[asset] = latest_price
                 intervals[asset] = [latest_price * 0.95, latest_price * 1.05]
                 continue
             
-            # Generate advanced ensemble prediction
-            point_estimate, lower_bound, upper_bound = ensemble_miner.ensemble_predict(data, asset)
-            
-            # Apply aggressive price validation and correction
-            corrected_price = ensemble_miner.meta_learner.validate_prediction_price(asset, point_estimate, data)
+            # For ETH, always use real-time prices instead of ensemble prediction
+            if asset.lower() == 'eth':
+                try:
+                    bt.logging.info(f"Using real-time ETH price instead of ensemble prediction")
+                    real_time_prices = get_current_market_prices(['eth'])
+                    corrected_price = real_time_prices.get('eth', 3500.0)
+                    bt.logging.info(f"Using real-time ETH price: ${corrected_price:,.2f}")
+                except Exception as e:
+                    bt.logging.error(f"Failed to fetch real-time ETH price: {e}")
+                    corrected_price = 3500.0  # Conservative fallback
+            else:
+                # Generate advanced ensemble prediction for other assets
+                point_estimate, lower_bound, upper_bound = ensemble_miner.ensemble_predict(data, asset)
+                
+                # Apply aggressive price validation and correction
+                corrected_price = ensemble_miner.meta_learner.validate_prediction_price(asset, point_estimate, data)
             
             # Additional validation for unrealistic prices using real-time market data
             if asset.lower() == 'btc' and (corrected_price < 50000 or corrected_price > 200000):
