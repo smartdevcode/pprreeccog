@@ -14,8 +14,10 @@ class RealTimePriceFetcher:
     
     def __init__(self):
         self.cache = {}
-        self.cache_timeout = 0  # Disable caching - always fetch fresh prices
+        self.cache_timeout = 30  # Cache for 30 seconds to avoid rate limits
         self.last_update = 0
+        self.api_failures = {}
+        self.rate_limit_delay = 2  # Delay between API calls
         
     def get_current_prices(self, assets: list) -> Dict[str, float]:
         """Get current prices for multiple assets from reliable sources."""
@@ -30,34 +32,41 @@ class RealTimePriceFetcher:
             self.cache.pop('tao', None)  # Clear TAO from cache
             self.cache.pop('tao_bittensor', None)  # Clear TAO_BITTENSOR from cache
         
-        # Always fetch fresh prices for better accuracy (disable caching)
-        # This ensures we get the most current market prices for predictions
-        bt.logging.debug("Fetching fresh prices for maximum accuracy")
+        # Use cache if recent enough to avoid rate limits
+        if current_time - self.last_update < self.cache_timeout and self.cache:
+            bt.logging.debug("Using cached prices to avoid rate limits")
+            return self.cache
         
         prices = {}
         
-        # Try multiple sources for reliability
+        # Try multiple sources for reliability with smart API selection
         try:
-            # Method 1: CoinGecko API (free, no API key)
-            bt.logging.debug(f"Attempting to fetch prices from CoinGecko for: {assets}")
-            prices = self._fetch_from_coingecko(assets)
-            if prices:
-                bt.logging.info(f"✅ Fetched prices from CoinGecko: {prices}")
-            else:
-                bt.logging.debug("CoinGecko returned empty prices, trying CoinCap")
-                # Method 2: CoinCap API (free, no API key)
-                prices = self._fetch_from_coincap(assets)
+            # Check API failure history and prioritize working APIs
+            if self.api_failures.get('coingecko', 0) < 3:  # Try CoinGecko if not too many failures
+                bt.logging.debug(f"Attempting to fetch prices from CoinGecko for: {assets}")
+                prices = self._fetch_from_coingecko(assets)
                 if prices:
-                    bt.logging.info(f"✅ Fetched prices from CoinCap: {prices}")
+                    bt.logging.info(f"✅ Fetched prices from CoinGecko: {prices}")
+                    self.api_failures['coingecko'] = 0  # Reset failure count
                 else:
-                    bt.logging.debug("CoinCap returned empty prices, trying Binance")
-                    # Method 3: Binance API (free, no API key)
+                    self.api_failures['coingecko'] = self.api_failures.get('coingecko', 0) + 1
+                    bt.logging.debug("CoinGecko returned empty prices, trying Binance")
+                    # Skip CoinCap if it's having DNS issues, go straight to Binance
                     prices = self._fetch_from_binance(assets)
                     if prices:
                         bt.logging.info(f"✅ Fetched prices from Binance: {prices}")
                     else:
                         bt.logging.warning("All APIs returned empty prices, using fallback")
                         prices = self._get_fallback_prices(assets)
+            else:
+                # Skip CoinGecko if too many failures, go straight to Binance
+                bt.logging.debug("Skipping CoinGecko due to previous failures, trying Binance")
+                prices = self._fetch_from_binance(assets)
+                if prices:
+                    bt.logging.info(f"✅ Fetched prices from Binance: {prices}")
+                else:
+                    bt.logging.warning("Binance failed, using fallback")
+                    prices = self._get_fallback_prices(assets)
                         
         except Exception as e:
             bt.logging.error(f"Failed to fetch real-time prices: {e}")
@@ -71,8 +80,11 @@ class RealTimePriceFetcher:
         return prices
     
     def _fetch_from_coingecko(self, assets: list) -> Dict[str, float]:
-        """Fetch prices from CoinGecko API."""
+        """Fetch prices from CoinGecko API with rate limiting."""
         try:
+            # Add delay to avoid rate limiting
+            time.sleep(self.rate_limit_delay)
+            
             # Map assets to CoinGecko IDs
             asset_mapping = {
                 'btc': 'bitcoin',
@@ -86,7 +98,13 @@ class RealTimePriceFetcher:
             
             url = f"https://api.coingecko.com/api/v3/simple/price?ids={coin_ids_str}&vs_currencies=usd"
             
-            response = requests.get(url, timeout=5)
+            # Add headers to be more respectful to the API
+            headers = {
+                'User-Agent': 'Precog-Miner/1.0',
+                'Accept': 'application/json'
+            }
+            
+            response = requests.get(url, timeout=10, headers=headers)
             response.raise_for_status()
             data = response.json()
             
