@@ -209,9 +209,14 @@ class RealTimePriceFetcher:
             
             prices = {}
             
-            # Get latest prices from CoinMetrics (last 5 minutes of data to ensure we get data)
+            # Get latest prices from CoinMetrics (try different time ranges)
             end_time = datetime.now()
-            start_time = end_time - timedelta(minutes=5)
+            time_ranges = [
+                timedelta(minutes=5),   # Last 5 minutes
+                timedelta(minutes=30),  # Last 30 minutes
+                timedelta(hours=1),     # Last 1 hour
+                timedelta(hours=6)      # Last 6 hours
+            ]
             
             for asset in assets:
                 cm_asset = asset_mapping.get(asset.lower(), asset.lower())
@@ -219,31 +224,80 @@ class RealTimePriceFetcher:
                 try:
                     bt.logging.debug(f"Fetching CoinMetrics data for {asset} (CM asset: {cm_asset})")
                     
-                    # Try different frequencies if 1s doesn't work
+                    # Try different time ranges and frequencies
                     frequencies = ["1s", "1m", "5m"]
                     data = None
                     
-                    for freq in frequencies:
-                        try:
-                            data = cm.get_CM_ReferenceRate(
-                                assets=[cm_asset],
-                                start=start_time,
-                                end=end_time,
-                                frequency=freq,
-                                use_cache=False
-                            )
-                            if not data.empty:
-                                bt.logging.debug(f"✅ Got data with {freq} frequency")
-                                break
-                        except Exception as e:
-                            bt.logging.debug(f"Failed with {freq} frequency: {e}")
-                            continue
+                    for time_range in time_ranges:
+                        start_time = end_time - time_range
+                        bt.logging.debug(f"Trying time range: {start_time} to {end_time}")
+                        
+                        for freq in frequencies:
+                            try:
+                                data = cm.get_CM_ReferenceRate(
+                                    assets=[cm_asset],
+                                    start=start_time,
+                                    end=end_time,
+                                    frequency=freq,
+                                    use_cache=False
+                                )
+                                if not data.empty:
+                                    bt.logging.debug(f"✅ Got data with {freq} frequency in {time_range}")
+                                    break
+                            except Exception as e:
+                                bt.logging.debug(f"Failed with {freq} frequency: {e}")
+                                continue
+                        
+                        if data is not None and not data.empty:
+                            break
                     
                     if data is not None and not data.empty:
-                        # Get the latest price
-                        latest_price = float(data['ReferenceRateUSD'].iloc[-1])
-                        prices[asset.lower()] = latest_price
-                        bt.logging.debug(f"✅ Fetched {asset.upper()} price from CoinMetrics: ${latest_price:.2f}")
+                        # Check available columns and handle NaN values
+                        bt.logging.debug(f"Available columns: {list(data.columns)}")
+                        
+                        # Try different price columns
+                        price_columns = ['ReferenceRateUSD', 'priceUSD', 'price', 'close']
+                        latest_price = None
+                        
+                        for col in price_columns:
+                            if col in data.columns:
+                                # Get the latest non-NaN value
+                                valid_prices = data[col].dropna()
+                                if not valid_prices.empty:
+                                    latest_price = float(valid_prices.iloc[-1])
+                                    bt.logging.debug(f"✅ Got price from {col} column: ${latest_price:.2f}")
+                                    break
+                        
+                        if latest_price is not None:
+                            prices[asset.lower()] = latest_price
+                            bt.logging.debug(f"✅ Fetched {asset.upper()} price from CoinMetrics: ${latest_price:.2f}")
+                        else:
+                            bt.logging.warning(f"No valid price data for {asset} (CM asset: {cm_asset})")
+                            bt.logging.debug(f"Data sample: {data.head()}")
+                            
+                            # Try alternative method - get latest available data
+                            try:
+                                # Get data from last 24 hours to find any valid price
+                                alt_start = end_time - timedelta(hours=24)
+                                alt_data = cm.get_CM_ReferenceRate(
+                                    assets=[cm_asset],
+                                    start=alt_start,
+                                    end=end_time,
+                                    frequency="1h",
+                                    use_cache=False
+                                )
+                                
+                                if not alt_data.empty:
+                                    for col in ['ReferenceRateUSD', 'priceUSD', 'price', 'close']:
+                                        if col in alt_data.columns:
+                                            valid_prices = alt_data[col].dropna()
+                                            if not valid_prices.empty:
+                                                latest_price = float(valid_prices.iloc[-1])
+                                                prices[asset.lower()] = latest_price
+                                                bt.logging.debug(f"✅ Got {asset.upper()} price from alternative method: ${latest_price:.2f}")
+                                                break
+                            except Exception as e:
+                                bt.logging.debug(f"Alternative method failed for {asset}: {e}")
                     else:
                         bt.logging.warning(f"No CoinMetrics data for {asset} (CM asset: {cm_asset})")
                         
