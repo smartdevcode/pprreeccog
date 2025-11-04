@@ -443,19 +443,34 @@ class AdvancedEnsembleMiner:
             # Use more aggressive adjustments since we're predicting 1 hour ahead
             
             # Trend following with stronger scaling for future prediction
-            trend_adjustment = current_price * long_trend * 0.15  # 15% of long-term trend
+            trend_adjustment = current_price * long_trend * 0.30  # 30% of long-term trend (increased from 15%)
             
             # Momentum following with stronger scaling
-            momentum_adjustment = current_price * momentum * 0.10  # 10% of momentum
+            momentum_adjustment = current_price * momentum * 0.20  # 20% of momentum (increased from 10%)
             
             # Acceleration adjustment (predict if trend is accelerating)
-            acceleration_adjustment = current_price * acceleration * 0.05  # 5% of acceleration
+            acceleration_adjustment = current_price * acceleration * 0.10  # 10% of acceleration (increased from 5%)
             
             # Volatility-based adjustment (account for expected volatility)
-            volatility_adjustment = current_price * volatility * 0.03  # 3% of volatility
+            volatility_adjustment = current_price * volatility * 0.15  # 15% of volatility (increased from 3%)
             
             # Base prediction with forward-looking adjustments
             prediction = current_price + trend_adjustment + momentum_adjustment + acceleration_adjustment + volatility_adjustment
+            
+            # ENSURE MINIMUM PREDICTION CHANGE for meaningful forward-looking predictions
+            # If adjustments are too small, add a minimum expected movement
+            prediction_change_pct = abs(prediction - current_price) / current_price
+            min_expected_change = 0.002  # Minimum 0.2% change
+            
+            if prediction_change_pct < min_expected_change:
+                # Apply minimum change in the direction of the trend
+                if long_trend > 0 or momentum > 0:
+                    prediction = current_price * (1 + min_expected_change)
+                elif long_trend < 0 or momentum < 0:
+                    prediction = current_price * (1 - min_expected_change)
+                else:
+                    # If no clear trend, apply small upward bias (markets tend to drift up slightly)
+                    prediction = current_price * (1 + min_expected_change * 0.5)
             
             # REALISTIC BOUNDS FOR FUTURE PREDICTIONS
             # Allow for reasonable price movements over 1 hour
@@ -466,10 +481,20 @@ class AdvancedEnsembleMiner:
             final_prediction = max(min_price, min(prediction, max_price))
             
             # Log prediction details for monitoring
-            bt.logging.debug(f"🎯 {asset} prediction (1h ahead): current=${current_price:.2f}")
-            bt.logging.debug(f"🎯 {asset} signals: long_trend={long_trend:.4f}, momentum={momentum:.4f}, acceleration={acceleration:.4f}, volatility={volatility:.4f}")
-            bt.logging.debug(f"🎯 {asset} adjustments: trend={trend_adjustment:.2f}, momentum={momentum_adjustment:.2f}, acceleration={acceleration_adjustment:.2f}, volatility={volatility_adjustment:.2f}")
-            bt.logging.debug(f"🎯 {asset} final prediction: ${final_prediction:.2f} (expected change in 1h: {((final_prediction - current_price) / current_price * 100):+.2f}%)")
+            prediction_change_pct = ((final_prediction - current_price) / current_price * 100)
+            bt.logging.info(f"🎯 {asset.upper()} Prediction Analysis (1h ahead):")
+            bt.logging.info(f"   Current: ${current_price:.2f}")
+            bt.logging.info(f"   Signals: trend={long_trend:.4f}, momentum={momentum:.4f}, acceleration={acceleration:.4f}, volatility={volatility:.4f}")
+            bt.logging.info(f"   Adjustments: trend=${trend_adjustment:.2f}, momentum=${momentum_adjustment:.2f}, acceleration=${acceleration_adjustment:.2f}, volatility=${volatility_adjustment:.2f}")
+            bt.logging.info(f"   Final Prediction: ${final_prediction:.2f} (expected change: {prediction_change_pct:+.2f}%)")
+            
+            # Warn if prediction is too conservative
+            if abs(prediction_change_pct) < 0.15:  # Less than 0.15% change
+                bt.logging.warning(f"   ⚠️  Prediction too conservative! Validator evaluates 1 hour ahead - need to anticipate movements.")
+            elif abs(prediction_change_pct) < 0.5:  # Less than 0.5% change
+                bt.logging.info(f"   ✅ Good forward-looking prediction")
+            else:
+                bt.logging.info(f"   ✅ Excellent forward-looking prediction")
             
             return final_prediction
             
