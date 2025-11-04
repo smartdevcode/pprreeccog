@@ -668,33 +668,60 @@ async def forward(synapse: Challenge, cm: CMData) -> Challenge:
                 # Calculate prediction based on current price with market analysis
                 point_estimate = ensemble_miner._generate_intelligent_prediction(data, asset, current_price)
                 
-                # OPTIMIZED INTERVAL CALCULATION FOR FUTURE PRICE MOVEMENTS
+                # OPTIMIZED INTERVAL CALCULATION FOR MAXIMUM SCORING
+                # Interval score = inclusion_factor * width_factor
+                # Goal: Narrow intervals (2-2.5%) that still capture price movements
                 volatility = ensemble_miner._calculate_asset_volatility(data, asset)
                 
                 # Calculate interval around the prediction, not current price
-                # This accounts for expected price movement over 1 hour
                 prediction_center = point_estimate
                 
-                # Use volatility-based margin for future predictions
-                # Target 80-90% inclusion rate with optimal width
-                margin = prediction_center * volatility * 2.0  # 2 standard deviations (for 1 hour ahead)
+                # Asset-specific optimal interval widths for maximum scoring
+                asset_optimal_widths = {
+                    'btc': 0.022,      # 2.2% optimal for BTC
+                    'eth': 0.024,      # 2.4% optimal for ETH
+                    'tao': 0.025,      # 2.5% optimal for TAO
+                    'tao_bittensor': 0.025
+                }
                 
-                # Realistic bounds around the prediction
-                lower_bound = max(prediction_center - margin, prediction_center * 0.97)  # Min 3% below prediction
-                upper_bound = min(prediction_center + margin, prediction_center * 1.03)  # Max 3% above prediction
+                target_width_pct = asset_optimal_widths.get(asset.lower(), 0.023)  # Default 2.3%
                 
-                # Ensure intervals capture expected price movements (not too narrow)
-                min_width = prediction_center * 0.02  # Minimum 2% width
-                max_width = prediction_center * 0.06  # Maximum 6% width (allows for 1-hour movements)
+                # Calculate tighter margins for higher scores
+                # Use 1.5 standard deviations for tighter intervals (was 2.0)
+                margin = prediction_center * volatility * 1.5
                 
-                interval_width = upper_bound - lower_bound
-                if interval_width < min_width:
-                    # Expand interval if too narrow
+                # Calculate interval bounds
+                calculated_lower = prediction_center - margin
+                calculated_upper = prediction_center + margin
+                
+                # Apply target width (optimized for scoring)
+                target_width = prediction_center * target_width_pct
+                
+                # Ensure intervals are around the prediction point
+                lower_bound = prediction_center - target_width / 2
+                upper_bound = prediction_center + target_width / 2
+                
+                # But adjust if calculated bounds suggest wider movement is needed
+                # Balance between narrowness (higher score) and inclusion (capture prices)
+                if (calculated_upper - calculated_lower) > target_width * 1.2:
+                    # If calculated range is much wider, use a compromise
+                    # Slightly wider than target but still narrow for scoring
+                    compromise_width = min(target_width * 1.15, prediction_center * 0.028)  # Max 2.8%
+                    lower_bound = prediction_center - compromise_width / 2
+                    upper_bound = prediction_center + compromise_width / 2
+                
+                # Safety bounds - ensure intervals stay reasonable
+                min_width = prediction_center * 0.020  # Minimum 2.0% width (for inclusion)
+                max_width = prediction_center * 0.030  # Maximum 3.0% width (for scoring)
+                
+                final_width = upper_bound - lower_bound
+                if final_width < min_width:
+                    # Expand if too narrow (to ensure inclusion)
                     center = (upper_bound + lower_bound) / 2
                     lower_bound = center - min_width / 2
                     upper_bound = center + min_width / 2
-                elif interval_width > max_width:
-                    # Narrow interval if too wide
+                elif final_width > max_width:
+                    # Narrow if too wide (for better scoring)
                     center = (upper_bound + lower_bound) / 2
                     lower_bound = center - max_width / 2
                     upper_bound = center + max_width / 2
@@ -702,8 +729,10 @@ async def forward(synapse: Challenge, cm: CMData) -> Challenge:
                 corrected_price = point_estimate
                 
                 # Log interval details for monitoring
-                bt.logging.debug(f"🎯 {asset} interval: volatility={volatility:.4f}, margin={margin:.2f}")
-                bt.logging.debug(f"🎯 {asset} bounds: [${lower_bound:.2f}, ${upper_bound:.2f}] (width: {((upper_bound - lower_bound) / current_price * 100):.2f}%)")
+                final_interval_width = (upper_bound - lower_bound) / prediction_center * 100
+                bt.logging.debug(f"🎯 {asset} interval: volatility={volatility:.4f}, target_width={target_width_pct*100:.2f}%")
+                bt.logging.debug(f"🎯 {asset} bounds: [${lower_bound:.2f}, ${upper_bound:.2f}] (width: {final_interval_width:.2f}%)")
+                bt.logging.info(f"   📊 Optimized interval width: {final_interval_width:.2f}% (target: {target_width_pct*100:.2f}%)")
                 
             else:
                 # Fallback to ensemble prediction if no current price
@@ -837,13 +866,15 @@ async def forward(synapse: Challenge, cm: CMData) -> Challenge:
                 interval_width = (upper - lower) / real_time_price
                 bt.logging.info(f"   - {asset.upper()} Interval: [${lower:.2f}, ${upper:.2f}] | Width={interval_width:.3f}")
                 
-                # Log expected interval scoring
-                if 0.02 <= interval_width <= 0.05:  # 2-5% width
-                    bt.logging.info(f"     ✅ OPTIMAL: Interval width 2-5% (high score expected)")
-                elif 0.01 <= interval_width <= 0.08:  # 1-8% width
-                    bt.logging.info(f"     ✅ GOOD: Interval width 1-8% (good score expected)")
+                # Log expected interval scoring (optimized thresholds)
+                if 0.020 <= interval_width <= 0.025:  # 2.0-2.5% width (optimal for scoring)
+                    bt.logging.info(f"     ✅ EXCELLENT: Interval width 2.0-2.5% (maximum score expected)")
+                elif 0.025 < interval_width <= 0.030:  # 2.5-3.0% width (very good)
+                    bt.logging.info(f"     ✅ OPTIMAL: Interval width 2.5-3.0% (high score expected)")
+                elif 0.018 <= interval_width < 0.020 or 0.030 < interval_width <= 0.035:  # Near optimal
+                    bt.logging.info(f"     ✅ GOOD: Interval width near optimal (good score expected)")
                 else:
-                    bt.logging.warning(f"     ⚠️  SUBOPTIMAL: Interval width outside optimal range")
+                    bt.logging.warning(f"     ⚠️  SUBOPTIMAL: Interval width {interval_width*100:.2f}% outside optimal range (2.0-3.0%)")
         except Exception as e:
             bt.logging.debug(f"Could not analyze interval for {asset}: {e}")
     
