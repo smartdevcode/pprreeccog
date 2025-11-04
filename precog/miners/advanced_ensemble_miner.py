@@ -783,6 +783,7 @@ async def forward(synapse: Challenge, cm: CMData) -> Challenge:
     bt.logging.info(f"   - Data quality: {avg_data_quality:.3f}")
     bt.logging.info(f"   - Assets processed: {len(predictions)}/{total_assets}")
     bt.logging.info(f"   - Predictions generated: {len([p for p in predictions.values() if p is not None])}")
+    bt.logging.info(f"   ⏰ Note: Validator uses moving average (5% update/block) - improvements appear gradually over 4-24 hours")
     
     # Log prediction prices and expected scoring
     for asset, price in predictions.items():
