@@ -458,9 +458,18 @@ class AdvancedEnsembleMiner:
             prediction = current_price + trend_adjustment + momentum_adjustment + acceleration_adjustment + volatility_adjustment
             
             # ENSURE MINIMUM PREDICTION CHANGE for meaningful forward-looking predictions
-            # If adjustments are too small, add a minimum expected movement
+            # For 1-hour predictions, we need to anticipate actual price movements
             prediction_change_pct = abs(prediction - current_price) / current_price
-            min_expected_change = 0.002  # Minimum 0.2% change
+            
+            # Asset-specific minimum expected changes based on typical 1-hour volatility
+            asset_min_changes = {
+                'btc': 0.003,   # 0.3% minimum for BTC (typical 1h volatility ~0.3-0.5%)
+                'eth': 0.004,   # 0.4% minimum for ETH (typical 1h volatility ~0.4-0.6%)
+                'tao': 0.005,   # 0.5% minimum for TAO (typical 1h volatility ~0.5-0.8%)
+                'tao_bittensor': 0.005
+            }
+            
+            min_expected_change = asset_min_changes.get(asset.lower(), 0.003)  # Default 0.3%
             
             if prediction_change_pct < min_expected_change:
                 # Apply minimum change in the direction of the trend
@@ -469,8 +478,11 @@ class AdvancedEnsembleMiner:
                 elif long_trend < 0 or momentum < 0:
                     prediction = current_price * (1 - min_expected_change)
                 else:
-                    # If no clear trend, apply small upward bias (markets tend to drift up slightly)
-                    prediction = current_price * (1 + min_expected_change * 0.5)
+                    # If no clear trend, use volatility to determine direction and magnitude
+                    if volatility > 0.01:  # Higher volatility = larger expected movement
+                        prediction = current_price * (1 + min_expected_change * 1.2)
+                    else:
+                        prediction = current_price * (1 + min_expected_change * 0.8)
             
             # REALISTIC BOUNDS FOR FUTURE PREDICTIONS
             # Allow for reasonable price movements over 1 hour
@@ -488,13 +500,21 @@ class AdvancedEnsembleMiner:
             bt.logging.info(f"   Adjustments: trend=${trend_adjustment:.2f}, momentum=${momentum_adjustment:.2f}, acceleration=${acceleration_adjustment:.2f}, volatility=${volatility_adjustment:.2f}")
             bt.logging.info(f"   Final Prediction: ${final_prediction:.2f} (expected change: {prediction_change_pct:+.2f}%)")
             
-            # Warn if prediction is too conservative
-            if abs(prediction_change_pct) < 0.15:  # Less than 0.15% change
+            # Warn if prediction is too conservative (based on asset-specific minimums)
+            asset_warning_thresholds = {
+                'btc': 0.25,      # Warn if < 0.25%
+                'eth': 0.30,      # Warn if < 0.30%
+                'tao': 0.40,      # Warn if < 0.40%
+                'tao_bittensor': 0.40
+            }
+            warning_threshold = asset_warning_thresholds.get(asset.lower(), 0.25)
+            
+            if abs(prediction_change_pct) < warning_threshold:
                 bt.logging.warning(f"   ⚠️  Prediction too conservative! Validator evaluates 1 hour ahead - need to anticipate movements.")
-            elif abs(prediction_change_pct) < 0.5:  # Less than 0.5% change
-                bt.logging.info(f"   ✅ Good forward-looking prediction")
+            elif abs(prediction_change_pct) < 0.8:  # Less than 0.8% change
+                bt.logging.info(f"   ✅ Good forward-looking prediction ({prediction_change_pct:+.2f}%)")
             else:
-                bt.logging.info(f"   ✅ Excellent forward-looking prediction")
+                bt.logging.info(f"   ✅ Excellent forward-looking prediction ({prediction_change_pct:+.2f}%)")
             
             return final_prediction
             
