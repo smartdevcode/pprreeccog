@@ -422,33 +422,54 @@ class AdvancedEnsembleMiner:
             # Calculate volatility for more accurate predictions
             volatility = self._calculate_asset_volatility(data, asset)
             
-            # OPTIMIZED PREDICTION ALGORITHM FOR INCENTIVE SCORING
-            # Use smaller, more conservative adjustments for better accuracy
+            # OPTIMIZED PREDICTION ALGORITHM FOR FUTURE PRICE MOVEMENTS
+            # Validator evaluates predictions 1 hour in the future, so we need to predict actual movements
             
-            # Trend following with conservative scaling
-            trend_adjustment = current_price * trend * 0.05  # 5% of trend (reduced from 10%)
+            # Calculate longer-term trend (last 30 data points) for better future prediction
+            if len(prices) >= 30:
+                long_trend = (prices.iloc[-1] - prices.iloc[-30]) / prices.iloc[-30]
+            else:
+                long_trend = trend
             
-            # Momentum following with conservative scaling  
-            momentum_adjustment = current_price * momentum * 0.03  # 3% of momentum (reduced from 5%)
+            # Calculate acceleration (change in momentum)
+            if len(prices) >= 10:
+                recent_momentum = (prices.iloc[-1] - prices.iloc[-5]) / prices.iloc[-5]
+                earlier_momentum = (prices.iloc[-5] - prices.iloc[-10]) / prices.iloc[-10] if len(prices) >= 10 else 0
+                acceleration = recent_momentum - earlier_momentum
+            else:
+                acceleration = 0.0
             
-            # Volatility-based adjustment (minimal)
-            volatility_adjustment = current_price * volatility * 0.01  # 1% of volatility (reduced from 2%)
+            # IMPROVED PREDICTION: Anticipate future price movements
+            # Use more aggressive adjustments since we're predicting 1 hour ahead
             
-            # Base prediction with conservative adjustments
-            prediction = current_price + trend_adjustment + momentum_adjustment + volatility_adjustment
+            # Trend following with stronger scaling for future prediction
+            trend_adjustment = current_price * long_trend * 0.15  # 15% of long-term trend
             
-            # TIGHTER BOUNDS FOR BETTER ACCURACY
-            # Keep predictions very close to current price for better scoring
-            min_price = current_price * 0.98  # 2% below current (tighter bounds)
-            max_price = current_price * 1.02  # 2% above current (tighter bounds)
+            # Momentum following with stronger scaling
+            momentum_adjustment = current_price * momentum * 0.10  # 10% of momentum
             
-            # Ensure prediction stays within tight bounds
+            # Acceleration adjustment (predict if trend is accelerating)
+            acceleration_adjustment = current_price * acceleration * 0.05  # 5% of acceleration
+            
+            # Volatility-based adjustment (account for expected volatility)
+            volatility_adjustment = current_price * volatility * 0.03  # 3% of volatility
+            
+            # Base prediction with forward-looking adjustments
+            prediction = current_price + trend_adjustment + momentum_adjustment + acceleration_adjustment + volatility_adjustment
+            
+            # REALISTIC BOUNDS FOR FUTURE PREDICTIONS
+            # Allow for reasonable price movements over 1 hour
+            min_price = current_price * 0.97  # 3% below current (allows for downward movements)
+            max_price = current_price * 1.03  # 3% above current (allows for upward movements)
+            
+            # Ensure prediction stays within realistic bounds
             final_prediction = max(min_price, min(prediction, max_price))
             
             # Log prediction details for monitoring
-            bt.logging.debug(f"🎯 {asset} prediction: current=${current_price:.2f}, trend={trend:.4f}, momentum={momentum:.4f}, volatility={volatility:.4f}")
-            bt.logging.debug(f"🎯 {asset} adjustments: trend={trend_adjustment:.2f}, momentum={momentum_adjustment:.2f}, volatility={volatility_adjustment:.2f}")
-            bt.logging.debug(f"🎯 {asset} final prediction: ${final_prediction:.2f} (change: {((final_prediction - current_price) / current_price * 100):+.2f}%)")
+            bt.logging.debug(f"🎯 {asset} prediction (1h ahead): current=${current_price:.2f}")
+            bt.logging.debug(f"🎯 {asset} signals: long_trend={long_trend:.4f}, momentum={momentum:.4f}, acceleration={acceleration:.4f}, volatility={volatility:.4f}")
+            bt.logging.debug(f"🎯 {asset} adjustments: trend={trend_adjustment:.2f}, momentum={momentum_adjustment:.2f}, acceleration={acceleration_adjustment:.2f}, volatility={volatility_adjustment:.2f}")
+            bt.logging.debug(f"🎯 {asset} final prediction: ${final_prediction:.2f} (expected change in 1h: {((final_prediction - current_price) / current_price * 100):+.2f}%)")
             
             return final_prediction
             
@@ -602,20 +623,33 @@ async def forward(synapse: Challenge, cm: CMData) -> Challenge:
                 # Calculate prediction based on current price with market analysis
                 point_estimate = ensemble_miner._generate_intelligent_prediction(data, asset, current_price)
                 
-                # OPTIMIZED INTERVAL CALCULATION FOR BETTER SCORING
+                # OPTIMIZED INTERVAL CALCULATION FOR FUTURE PRICE MOVEMENTS
                 volatility = ensemble_miner._calculate_asset_volatility(data, asset)
                 
-                # Use optimized margin calculation for better interval scores
+                # Calculate interval around the prediction, not current price
+                # This accounts for expected price movement over 1 hour
+                prediction_center = point_estimate
+                
+                # Use volatility-based margin for future predictions
                 # Target 80-90% inclusion rate with optimal width
-                margin = current_price * volatility * 1.5  # 1.5 standard deviations (optimized)
+                margin = prediction_center * volatility * 2.0  # 2 standard deviations (for 1 hour ahead)
                 
-                # Tighter bounds for better scoring
-                lower_bound = max(current_price - margin, current_price * 0.985)  # Min 1.5% down
-                upper_bound = min(current_price + margin, current_price * 1.015)  # Max 1.5% up
+                # Realistic bounds around the prediction
+                lower_bound = max(prediction_center - margin, prediction_center * 0.97)  # Min 3% below prediction
+                upper_bound = min(prediction_center + margin, prediction_center * 1.03)  # Max 3% above prediction
                 
-                # Ensure intervals are not too wide (which hurts scoring)
-                max_width = current_price * 0.03  # Maximum 3% width
-                if (upper_bound - lower_bound) > max_width:
+                # Ensure intervals capture expected price movements (not too narrow)
+                min_width = prediction_center * 0.02  # Minimum 2% width
+                max_width = prediction_center * 0.06  # Maximum 6% width (allows for 1-hour movements)
+                
+                interval_width = upper_bound - lower_bound
+                if interval_width < min_width:
+                    # Expand interval if too narrow
+                    center = (upper_bound + lower_bound) / 2
+                    lower_bound = center - min_width / 2
+                    upper_bound = center + min_width / 2
+                elif interval_width > max_width:
+                    # Narrow interval if too wide
                     center = (upper_bound + lower_bound) / 2
                     lower_bound = center - max_width / 2
                     upper_bound = center + max_width / 2
@@ -632,11 +666,14 @@ async def forward(synapse: Challenge, cm: CMData) -> Challenge:
                 corrected_price = point_estimate
             
             # Log the actual prediction vs real-time price for comparison
+            # Note: Validator evaluates predictions 1 hour in the future, not against current prices
             try:
                 real_time_prices = get_current_market_prices([asset])
                 real_time_price = real_time_prices.get(asset.lower(), 0)
                 if real_time_price > 0:
-                    bt.logging.info(f"🎯 {asset.upper()} Prediction: ${corrected_price:,.2f} | Real-time: ${real_time_price:,.2f} | Difference: {((corrected_price - real_time_price) / real_time_price * 100):+.2f}%")
+                    expected_change = ((corrected_price - real_time_price) / real_time_price * 100)
+                    bt.logging.info(f"🎯 {asset.upper()} Prediction (1h ahead): ${corrected_price:,.2f} | Current: ${real_time_price:,.2f} | Expected change: {expected_change:+.2f}%")
+                    bt.logging.debug(f"   ⚠️  Note: Validator compares this prediction against FUTURE prices (1 hour later)")
             except Exception as e:
                 bt.logging.debug(f"Could not compare prediction with real-time price: {e}")
             
